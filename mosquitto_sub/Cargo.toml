@@ -1,0 +1,9 @@
+[package]
+name = "mosquitto_sub"
+version = "0.1.0"
+authors = ["MwlLj <731025894@qq.com>"]
+edition = "2018"
+
+[dependencies]
+rumqtt = "*"
+rust_parse = { git = "https://github.com/MwlLj/rust_parse" }
