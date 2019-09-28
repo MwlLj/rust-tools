@@ -40,7 +40,7 @@ impl CDependSearcher {
                     return true;
                 }
             };
-            if let Err(_) = self.readLibConfig(path, param) {
+            if let Err(_) = self.readLibConfig(root, path, param) {
                 return true;
             };
             true
@@ -54,7 +54,7 @@ impl CDependSearcher {
                 return true;
             }
             // find lib.libraryconfig.toml
-            if let Err(_) = self.readLibConfig(path, param) {
+            if let Err(_) = self.readLibConfig(root, path, param) {
                 return true;
             };
             true
@@ -63,7 +63,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, path: &str, param: &parse::git_lib::CGitLib) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str, path: &str, param: &parse::git_lib::CGitLib) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -111,6 +111,25 @@ impl CDependSearcher {
                 return Err("calc full name error");
             }
         };
+        // depends
+        match &dependVersion.dependencies {
+            Some(depends) => {
+                for (key, value) in depends {
+                    // let mut p = param.clone();
+                    // p.name = Some(key.to_string());
+                    // p.version = Some(value.version.to_string());
+                    self.search(root, &parse::git_lib::CGitLib{
+                        name: Some(key.to_string()),
+                        version: Some(value.version.to_string()),
+                        platform: param.platform.clone(),
+                        extra: param.extra.clone(),
+                        extraType: param.extraType.clone()
+                    });
+                }
+            },
+            None => {
+            }
+        }
         println!("{:?}", fullName);
         Ok(())
     }
