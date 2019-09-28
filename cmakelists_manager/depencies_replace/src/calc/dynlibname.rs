@@ -170,7 +170,38 @@ pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &confi
     ** If none of them exist, set the default value.
     */
     let mut attributes = match &libVesion.attributes {
-        Some(a) => a.clone(),
+        Some(a) => {
+            let platform = match &a.platform {
+                Some(p) => p,
+                None => {
+                    platform_default
+                }
+            };
+            let debug = match &a.debug {
+                Some(d) => d,
+                None => {
+                    debug_default
+                }
+            };
+            let release = match &a.release {
+                Some(r) => r,
+                None => {
+                    release_default
+                }
+            };
+            let rule = match &a.rule {
+                Some(r) => r,
+                None => {
+                    rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: Some(platform.to_string()),
+                debug: Some(debug.to_string()),
+                release: Some(release.to_string()),
+                rule: Some(rule.to_string())
+            }
+        },
         None => {
             let platform = match &libPackage.platform {
                 Some(p) => p,

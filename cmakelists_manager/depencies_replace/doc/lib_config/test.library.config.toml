@@ -10,7 +10,7 @@ platform = "$platform"
 debug = "_d"
 # 本库需要使用的release后缀名
 release = ""
-####### 高级用法 #######
+################# 高级用法 #################
 # 调用者在 cmake 中指定的extra字段为拓展字段
 # 如果指定 extraType 为 json, 可以提取extra中的字段进行拼接
 #       例: 上面的配置写成: platform = "abcd.'$extra.name'.'$extra.objs[0]'"
