@@ -1,0 +1,27 @@
+[package]
+name = "depencies_replace"
+version = "0.1.0"
+authors = ["MwlLj <731025894@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.cmakelists_parse]
+git = "https://github.com/MwlLj/rust-cmakelists-parse"
+version = "0.1.2"
+
+[dependencies.path]
+git = "https://github.com/MwlLj/rust-libs"
+version = "0.1.2"
+
+[dependencies.serde]
+version = "1.0"
+
+[dependencies.serde_derive]
+version = "1.0"
+
+[dependencies.toml]
+verison = "0.5"
+
+[dependencies.json]
+version = "0.12"
