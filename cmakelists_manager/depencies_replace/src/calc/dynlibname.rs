@@ -125,9 +125,9 @@ fn join<'a, 'b:'a>(content: &'a str, platform: &str, mut extraJson: &'a JsonValu
 
 #[derive(Default, Debug)]
 pub struct CResult {
-    debug: Option<String>,
-    release: Option<String>,
-    dr: Option<String>
+    pub debug: Option<String>,
+    pub release: Option<String>,
+    pub dr: Option<String>
 }
 
 pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {

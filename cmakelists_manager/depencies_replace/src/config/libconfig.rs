@@ -37,7 +37,8 @@ impl CAttributes {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct CLib {
     pub version: String,
-    pub root: Option<String>
+    pub root: Option<String>,
+    pub no: String
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -70,7 +71,7 @@ mod test {
     #[test]
     #[ignore]
     fn parseTest() {
-        let content = fs::read("./doc/lib_config/test.toml").unwrap();
+        let content = fs::read("./doc/lib_config/test.library.config.toml").unwrap();
         let config = parse(&content).unwrap();
         println!("{:?}", config);
     }

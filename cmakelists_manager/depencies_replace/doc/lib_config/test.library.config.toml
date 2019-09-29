@@ -35,7 +35,9 @@ rule = "$name-$version-$platform$d_r"
 
 [versions."0.1.10".dependencies]
 http_server = {version = "0.1.0", root = "..", no = 1}
-openssl = {version = "1.0.0", root = ".", no = 0}
+openssl = {version = "1.0.0", root = ".", no = 2}
+libcurl = {version = "1.0.0", root = ".", no = 3}
+libevent = {version = "1.0.0", root = ".", no = 4}
 
 # [version."0.1.10".dependencies.http_server]
 # version = '0.1.0'

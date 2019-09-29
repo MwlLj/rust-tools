@@ -11,11 +11,11 @@ use std::fs;
 const lib_config_file_name: &str = "LibraryConfig.toml";
 const lib_config_file_suffix: &str = "library.config.toml";
 
-struct CDependSearcher {
+pub struct CDependSearcher {
 }
 
 impl CDependSearcher {
-    pub fn search<'b>(&self, root: &'b str, param: &parse::git_lib::CGitLib) -> Result<(), &'b str> {
+    pub fn search<'b>(&self, root: &'b str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
         let searchName = match &param.name {
             Some(n) => n,
             None => {
@@ -23,47 +23,52 @@ impl CDependSearcher {
                 return Err("name field is not found");
             }
         };
-        walk::walk(root, &mut |path: &str, name: &str| -> bool {
-            // dir
-            if name != searchName {
-                return true;
-            }
-            // find lib-name/LibraryConfig.toml
-            let filePath = Path::new(path).join(lib_config_file_name);
-            if !filePath.exists() {
-                return true
-            }
-            let path = match filePath.to_str() {
-                Some(p) => p,
-                None => {
-                    println!("filePath to_str error");
-                    return true;
+        walk::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::Type| -> bool {
+            match t {
+                walk::Type::Dir => {
+                    // dir
+                    if name != searchName {
+                        return true;
+                    }
+                    // find lib-name/LibraryConfig.toml
+                    let filePath = Path::new(path).join(lib_config_file_name);
+                    if !filePath.exists() {
+                        return true
+                    }
+                    let path = match filePath.to_str() {
+                        Some(p) => p,
+                        None => {
+                            println!("filePath to_str error");
+                            return true;
+                        }
+                    };
+                    if let Err(_) = self.readLibConfig(root, path, param, results) {
+                        return true;
+                    };
+                    true
+                },
+                walk::Type::File => {
+                    // file
+                    let mut n = String::new();
+                    n.push_str(searchName);
+                    n.push_str(".");
+                    n.push_str(lib_config_file_suffix);
+                    if name != n {
+                        return true;
+                    }
+                    // find lib.libraryconfig.toml
+                    if let Err(_) = self.readLibConfig(root, path, param, results) {
+                        return true;
+                    };
+                    true
                 }
-            };
-            if let Err(_) = self.readLibConfig(root, path, param) {
-                return true;
-            };
-            true
-        }, &mut |path: &str, name: &str| -> bool {
-            // file
-            let mut n = String::new();
-            n.push_str(searchName);
-            n.push_str(".");
-            n.push_str(lib_config_file_suffix);
-            if name != n {
-                return true;
             }
-            // find lib.libraryconfig.toml
-            if let Err(_) = self.readLibConfig(root, path, param) {
-                return true;
-            };
-            true
         })
     }
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, root: &str, path: &str, param: &parse::git_lib::CGitLib) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -111,6 +116,8 @@ impl CDependSearcher {
                 return Err("calc full name error");
             }
         };
+        // println!("{:?}", fullName);
+        results.push(fullName);
         // depends
         match &dependVersion.dependencies {
             Some(depends) => {
@@ -118,19 +125,24 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
-                    self.search(root, &parse::git_lib::CGitLib{
+                    let r = match &value.root {
+                        Some(r) => r,
+                        None => root
+                    };
+                    if let Err(_) = self.search(r, &parse::git_lib::CGitLib{
                         name: Some(key.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
                         extra: param.extra.clone(),
                         extraType: param.extraType.clone()
-                    });
+                    }, results) {
+                        return Err("search error");
+                    };
                 }
             },
             None => {
             }
         }
-        println!("{:?}", fullName);
         Ok(())
     }
 }
@@ -145,7 +157,7 @@ impl CDependSearcher {
 mod test {
     use super::*;
     #[test]
-    // #[ignore]
+    #[ignore]
     fn dependSearcherTest() {
         let searcher = CDependSearcher::new();
         searcher.search(".", &parse::git_lib::CGitLib{
@@ -155,6 +167,6 @@ mod test {
             // platform: Some("".to_string()),
             extra: Some("{\"name\": \"jake\", \"objs\": [\"1\", \"2\", \"3\"]}".to_string()),
             extraType: Some("json".to_string())
-        });
+        }, &mut Vec::new());
     }
 }
