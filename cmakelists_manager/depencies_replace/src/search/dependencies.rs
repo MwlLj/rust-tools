@@ -25,12 +25,12 @@ impl CDependSearcher {
         /*
         ** Get the library's own lib search path
         */
-        self.searchInner(root, &LibType::SelfLib, param, results)
+        self.searchInner(root, &LibType::SelfLib, &None, param, results)
     }
 }
 
 impl CDependSearcher {
-    fn searchInner<'b>(&self, root: &'b str/*, libRoot: &str, libRel: &str*/, libType: &LibType, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
+    fn searchInner<'b>(&self, root: &'b str/*, libRoot: &str, libRel: &str*/, libType: &LibType, dependInfo: &Option<&structs::libs::CLibInfo>, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
         let searchName = match &param.name {
             Some(n) => n,
             None => {
@@ -57,7 +57,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(root, libType, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root, libType, path, dependInfo, param, results) {
                         return true;
                     };
                     true
@@ -72,7 +72,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(root, libType, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root, libType, path, dependInfo, param, results) {
                         return true;
                     };
                     true
@@ -83,7 +83,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, root: &str, libType: &LibType, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str, libType: &LibType, path: &str, dependInfo: &Option<&structs::libs::CLibInfo>, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -134,34 +134,6 @@ impl CDependSearcher {
         // println!("{:?}", fullName);
         results.push(fullName);
         /*
-        let mut names = Vec::new();
-        match &fullName.dr {
-            Some(name) => {
-                names.push(name);
-            },
-            None => {
-                match &fullName.debug {
-                    Some(name) => {
-                        names.push(name);
-                    },
-                    None => {
-                        println!("[Warning denug is None]");
-                        return Ok(());
-                    }
-                }
-                match &fullName.release {
-                    Some(name) => {
-                        names.push(name);
-                    },
-                    None => {
-                        println!("[Warning release is None]");
-                        return Ok(());
-                    }
-                }
-            }
-        }
-        */
-        /*
         ** Find the directory where the specified name library name is located
         ** Search rule:
         ** 1. Find the specified run path
@@ -184,7 +156,9 @@ impl CDependSearcher {
                         name: &key,
                         version: &value.version,
                         no: &value.no,
-                        root: r
+                        root: r,
+                        libRoot: &value.libroot,
+                        libRel: &value.librel
                     });
                 }
                 quick_sort::sort(&mut ds);
@@ -196,7 +170,7 @@ impl CDependSearcher {
                     /*
                     ** Get the lib search path of the dependent library
                     */
-                    if let Err(_) = self.searchInner(value.root, &LibType::DependLib, &parse::git_lib::CGitLib{
+                    if let Err(_) = self.searchInner(value.root, &LibType::DependLib, &Some(value), &parse::git_lib::CGitLib{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
@@ -221,6 +195,49 @@ struct CSearchPath {
 }
 
 impl CDependSearcher {
+    fn findLibDir(&self, fullName: &calc::dynlibname::CResult
+        , libType: &LibType
+        , libPackage: &config::libconfig::CPackage
+        , libVesion: &config::libconfig::CVersion
+        , lib: &structs::libs::CLibInfo) -> Option<Vec<String>> {
+        let mut names = Vec::new();
+        match &fullName.dr {
+            Some(name) => {
+                names.push(name);
+            },
+            None => {
+                match &fullName.debug {
+                    Some(name) => {
+                        names.push(name);
+                    },
+                    None => {
+                        println!("[Warning denug is None]");
+                        return None;
+                    }
+                }
+                match &fullName.release {
+                    Some(name) => {
+                        names.push(name);
+                    },
+                    None => {
+                        println!("[Warning release is None]");
+                        return None;
+                    }
+                }
+            }
+        }
+        let mut paths = Vec::new();
+        match libType {
+            LibType::SelfLib => {
+                let search = self.getSelfLibSearch(libPackage, libVesion);
+            },
+            LibType::DependLib => {
+                let search = self.getDependLibSearch(libPackage, libVesion, lib);
+            }
+        }
+        Some(paths)
+    }
+
     /*
     ** Find the directory where the library name is located based on the root directory and the library name
     */
@@ -252,13 +269,11 @@ impl CDependSearcher {
 
     /*
     ** Get the library's own lib search path
+    ** search rule:
+    ** version attr -> package attr
     */
     fn getSelfLibSearch(&self, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> CSearchPath {
         let mut searchPath = CSearchPath::default();
-        /*
-        ** search rule:
-        ** version attr -> package attr
-        */
         match &libVesion.attributes {
             Some(attr) => {
                 match &attr.libroot {
@@ -269,10 +284,12 @@ impl CDependSearcher {
                         searchPath.libRoot = calc::dynlibname::libroot_default.to_string();
                     }
                 }
-                match &attr.libRel {
+                match &attr.librel {
                     Some(r) => {
+                        searchPath.libRel = r.clone();
                     },
                     None => {
+                        searchPath.libRel = calc::dynlibname::librel_default.to_string();
                     }
                 }
             },
@@ -285,6 +302,14 @@ impl CDependSearcher {
                         searchPath.libRoot = calc::dynlibname::libroot_default.to_string();
                     }
                 }
+                match &libPackage.librel {
+                    Some(r) => {
+                        searchPath.libRel = r.clone();
+                    },
+                    None => {
+                        searchPath.libRel = calc::dynlibname::librel_default.to_string();
+                    }
+                }
             }
         }
         searchPath
@@ -292,9 +317,28 @@ impl CDependSearcher {
 
     /*
     ** Get the lib search path of the dependent library
+    ** search rule:
+    ** depend attr -> version attr -> package attr
     */
-    fn getDependLibSearch(&self, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion, lib: &config::libconfig::CLib) -> CSearchPath {
-        self.getSelfLibSearch(libPackage, libVesion)
+    fn getDependLibSearch(&self, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion, lib: &structs::libs::CLibInfo) -> CSearchPath {
+        let mut search = self.getSelfLibSearch(libPackage, libVesion);
+        match &lib.libRoot {
+            Some(r) => {
+                search.libRoot = r.to_string();
+            },
+            None => {
+                // use getSelfLibSearch libroot
+            }
+        }
+        match &lib.libRel {
+            Some(r) => {
+                search.libRel = r.to_string();
+            },
+            None => {
+                // use getSelfLibSearch librel
+            }
+        }
+        search
     }
 }
 
