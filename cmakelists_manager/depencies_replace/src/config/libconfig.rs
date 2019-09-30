@@ -38,7 +38,9 @@ impl CAttributes {
 pub struct CLib {
     pub version: String,
     pub root: Option<String>,
-    pub no: String
+    pub no: u32,
+    pub librel: Option<String>,
+    pub libabs: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies.cmakelists_parse]
 git = "https://github.com/MwlLj/rust-cmakelists-parse"
-version = "0.1.2"
+version = "0.1.4"
 
 [dependencies.path]
 git = "https://github.com/MwlLj/rust-libs"
@@ -25,3 +25,6 @@ verison = "0.5"
 
 [dependencies.json]
 version = "0.12"
+
+[dependencies.quick_sort]
+version = "0.2"

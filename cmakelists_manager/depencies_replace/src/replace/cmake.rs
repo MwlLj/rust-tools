@@ -4,23 +4,31 @@ use crate::calc;
 
 use cmakelists_parse::parser::grammar::{CGrammar, ICall};
 
+use std::path::Path;
+use std::fs;
+
 const keyword_git_include: &str = "git_include";
 const keyword_git_lib: &str = "git_lib";
 
 const keyword_target_link_libraries: &str = "target_link_libraries";
+const keyword_link_directories: &str = "link_directories";
 
 const cmake_keyword_debug: &str = "debug";
 const cmake_keyword_release: &str = "release";
 
+const cmakelist_name: &str = "CMakelists.txt";
+
 enum WriteStatus {
     Write,
-    BackQuoteEnd
+    BackQuoteEnd,
+    StopWrite
 }
 
 struct CCall {
     content: String,
     writeStauts: WriteStatus,
-    root: String
+    root: String,
+    linkDirectoriesIndex: usize
 }
 
 impl ICall for CCall {
@@ -54,6 +62,10 @@ impl ICall for CCall {
                 return;
             };
             // println!("{:?}, {:?}", &params, &results);
+            /*
+            ** Record the total length before insertion
+            */
+            let startLen = self.content.len();
             for result in results.iter() {
                 match &result.dr {
                     Some(name) => {
@@ -90,7 +102,40 @@ impl ICall for CCall {
                 }
             }
             println!("{:?}, {:?}", &params, &results);
+            /*
+            ** Record the total length after insertion
+            */
+            let endLen = self.content.len();
+            /*
+            ** Calculate the length of this insertion
+            */
+            let writeLen = endLen - startLen;
+            /*
+            ** If self.linkDirectoriesIndex == 0,
+            ** indicating that linkDirectories appears after this insertion,
+            ** add self.linkDirectoriesIndex to this accumulated length.
+            */
+            self.plusOffset(writeLen);
             // println!("{:?}", params);
+        }
+        /*
+        if key.to_ascii_lowercase() == keyword_link_directories.to_ascii_lowercase() {
+            // println!("key: {}, value: {}", key, value);
+            self.writeStauts = WriteStatus::StopWrite;
+        }
+        */
+    }
+
+    fn on_k_end(&mut self, key: &str) {
+        if key.to_ascii_lowercase() == keyword_link_directories.to_ascii_lowercase() {
+            self.linkDirectoriesIndex = self.content.len() - 1;
+            /*
+            if cfg!(target_os="windows") {
+                self.content.push_str("\r");
+            }
+            self.content.push_str("\n");
+            // self.writeStauts = WriteStatus::Write;
+            */
         }
     }
 
@@ -98,6 +143,8 @@ impl ICall for CCall {
         match self.writeStauts {
             WriteStatus::BackQuoteEnd => {
                 self.writeStauts = WriteStatus::Write;
+            },
+            WriteStatus::StopWrite => {
             },
             _ => {
                 self.content.push(c);
@@ -122,6 +169,12 @@ impl CCall {
             self.content.pop();
         }
     }
+
+    fn plusOffset(&mut self, len: usize) {
+        if self.linkDirectoriesIndex == 0 {
+            self.linkDirectoriesIndex += len;
+        }
+    }
 }
 
 impl CCall {
@@ -129,7 +182,8 @@ impl CCall {
         CCall{
             content: String::new(),
             writeStauts: WriteStatus::Write,
-            root: root.to_string()
+            root: root.to_string(),
+            linkDirectoriesIndex: 0
         }
     }
 }
@@ -146,6 +200,22 @@ impl CCmakeParser {
             return Err(err);
         };
         println!("{:?}", call.content);
+        let p = Path::new(path);
+        let parent = match p.parent() {
+            Some(p) => p,
+            None => {
+                println!("get path parent path error");
+                return Err("get path parent path error");
+            }
+        };
+        let p = parent.join(cmakelist_name);
+        /*
+        ** Write file
+        */
+        if let Err(err) = fs::write(p, call.content) {
+            println!("write CMakelists.txtx error, err:{}", err);
+            return Err("write error");
+        };
         Ok(())
     }
 }

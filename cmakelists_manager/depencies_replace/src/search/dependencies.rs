@@ -1,6 +1,7 @@
 use crate::parse;
 use crate::config;
 use crate::calc;
+use super::structs;
 
 use path::walk;
 
@@ -15,7 +16,7 @@ pub struct CDependSearcher {
 }
 
 impl CDependSearcher {
-    pub fn search<'b>(&self, root: &'b str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
+    pub fn search<'b>(&self, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
         let searchName = match &param.name {
             Some(n) => n,
             None => {
@@ -42,7 +43,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(root, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -57,7 +58,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(root, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -68,7 +69,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, root: &str, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -118,19 +119,68 @@ impl CDependSearcher {
         };
         // println!("{:?}", fullName);
         results.push(fullName);
+        /*
+        let mut names = Vec::new();
+        match &fullName.dr {
+            Some(name) => {
+                names.push(name);
+            },
+            None => {
+                match &fullName.debug {
+                    Some(name) => {
+                        names.push(name);
+                    },
+                    None => {
+                        println!("[Warning denug is None]");
+                        return Ok(());
+                    }
+                }
+                match &fullName.release {
+                    Some(name) => {
+                        names.push(name);
+                    },
+                    None => {
+                        println!("[Warning release is None]");
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        */
+        /*
+        ** Find the directory where the specified name library name is located
+        ** Search rule:
+        ** 1. Find the specified absolute path
+        ** 2. Find the specified relative path
+        ** 3. In case of non-existence, use the default value
+        */
         // depends
         match &dependVersion.dependencies {
             Some(depends) => {
-                for (key, value) in depends {
-                    // let mut p = param.clone();
-                    // p.name = Some(key.to_string());
-                    // p.version = Some(value.version.to_string());
+                /*
+                ** Sort depends on no field
+                */
+                let mut ds = Vec::new();
+                for (key, value) in depends.iter() {
                     let r = match &value.root {
                         Some(r) => r,
                         None => root
                     };
-                    if let Err(_) = self.search(r, &parse::git_lib::CGitLib{
-                        name: Some(key.to_string()),
+                    ds.push(structs::libs::CLibInfo{
+                        name: &key,
+                        version: &value.version,
+                        no: &value.no,
+                        root: r
+                    });
+                }
+                quick_sort::sort(&mut ds);
+                // println!("{:?}", &ds);
+                for value in ds.iter() {
+                    // let mut p = param.clone();
+                    // p.name = Some(key.to_string());
+                    // p.version = Some(value.version.to_string());
+                    if let Err(_) = self.search(value.root, &parse::git_lib::CGitLib{
+                        name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
                         extra: param.extra.clone(),

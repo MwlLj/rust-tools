@@ -40,4 +40,4 @@ openssl = {version = "1.0.0", root = ".", no = 0}
 # version = '0.1.0'
 
 [versions."0.1.11".dependencies]
-http_server = {version = "0.1.1"}
+http_server = {version = "0.1.1", no = 0}
