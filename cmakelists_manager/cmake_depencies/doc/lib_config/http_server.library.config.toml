@@ -1,0 +1,43 @@
+[package]
+name = "http_server"
+authors = ''
+edition = ''
+# 根据 调用者在cmake中指定的字段拼接成自身的 platform
+# $platform:  调用者在cmake中指定的 platform 变量的值
+#           例: 调用方指定 {platform = ${FILE_PREFIX} }, 那么这里的 $platform 就是 ${FILE_PREFIX}
+platform = "$platform"
+# 本库需要使用的debug后缀名
+debug = "_d"
+# 本库需要使用的release后缀名
+release = ""
+################# 高级用法 #################
+# 调用者在 cmake 中指定的extra字段为拓展字段
+# 如果指定 extraType 为 json, 可以提取extra中的字段进行拼接
+#       例: 上面的配置写成: platform = "abcd.'$extra.name'.'$extra.objs[0]'"
+#           调用方cmake中写: extra = {"name": "jake", "objs": ["1", "2", "3"]}
+#           => 得到的 platform 值为: abcd.jake.1
+##################################################################
+# 这里是拼接规则
+# $name 表示 [package.name]
+# $version 表示 [versions.*] 中的版本
+# $platform 表示 [package.platform] 计算的到的值
+# 中间可以添加 非 a~z A~Z 0~9
+rule = "$name$version$platform$d_r"
+
+[versions."0.1.0".attributes]
+# 以下四个参数和 [package] 中的使用方式一致
+# 如果每个版本有自己的attributes, 优先取版本下的attributes, 如果版本下不存在attributes, 则取 package 中的attributes
+# platform = "$platform"
+platform = "abcd.'$extra.name'.'$extra.objs[0]'"
+debug = "_d"
+release = ""
+rule = "$name-$version-$platform$d_r"
+
+[versions."0.1.0".dependencies]
+openssl = {version = "1.0.0", root = ".", no = 0}
+
+# [version."0.1.10".dependencies.http_server]
+# version = '0.1.0'
+
+[versions."0.1.11".dependencies]
+http_server = {version = "0.1.1", no = 0}
