@@ -7,6 +7,8 @@ const platform_default: &str = "${FILE_PREFIX}";
 const debug_default: &str = "_d";
 const release_default: &str = "";
 const rule_default: &str = "$name$version$platform$d_r";
+pub const libroot_default: &str = ".";
+pub const librel_default: &str = "lib";
 
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
@@ -195,11 +197,25 @@ pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &confi
                     rule_default
                 }
             };
+            let libroot = match &a.libroot {
+                Some(r) => r,
+                None => {
+                    libroot_default
+                }
+            };
+            let librel = match &a.librel {
+                Some(r) => r,
+                None => {
+                    librel_default
+                }
+            };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
-                rule: Some(rule.to_string())
+                rule: Some(rule.to_string()),
+                libroot: Some(libroot.to_string()),
+                librel: Some(librel.to_string())
             }
         },
         None => {
@@ -227,11 +243,25 @@ pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &confi
                     rule_default
                 }
             };
+            let libroot = match &libPackage.libroot {
+                Some(r) => r,
+                None => {
+                    libroot_default
+                }
+            };
+            let librel = match &libPackage.librel {
+                Some(r) => r,
+                None => {
+                    librel_default
+                }
+            };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
-                rule: Some(rule.to_string())
+                rule: Some(rule.to_string()),
+                libroot: Some(libroot.to_string()),
+                librel: Some(librel.to_string())
             }
         }
     };

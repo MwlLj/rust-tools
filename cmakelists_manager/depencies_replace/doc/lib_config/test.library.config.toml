@@ -23,6 +23,8 @@ release = ""
 # $platform 表示 [package.platform] 计算的到的值
 # 中间可以添加 非 a~z A~Z 0~9
 rule = "$name$version$platform$d_r"
+librel = "."
+libroot = "."
 
 [versions."0.1.10".attributes]
 # 以下四个参数和 [package] 中的使用方式一致
@@ -32,11 +34,13 @@ platform = "abcd.'$extra.name'.'$extra.objs[0]'"
 debug = "_d"
 release = ""
 rule = "$name-$version-$platform$d_r"
+librel = "."
+libroot = "."
 
 [versions."0.1.10".dependencies]
 # librel: lib 相对 库名.library.config.toml / 库名/LibraryConfig.toml 的路径
-# libabs: 绝对路径, 默认不设置
-http_server = {version = "0.1.0", root = "..", librel = "lib", libabs = "", no = 1}
+# libroot: 相对运行路径
+http_server = {version = "0.1.0", root = "..", librel = "lib", libroot = "", no = 1}
 openssl = {version = "1.0.0", root = ".", no = 2}
 libcurl = {version = "1.0.0", root = ".", no = 3}
 libevent = {version = "1.0.0", root = ".", no = 4}

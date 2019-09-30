@@ -15,8 +15,22 @@ const lib_config_file_suffix: &str = "library.config.toml";
 pub struct CDependSearcher {
 }
 
+enum LibType {
+    SelfLib,
+    DependLib
+}
+
 impl CDependSearcher {
     pub fn search<'b>(&self, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
+        /*
+        ** Get the library's own lib search path
+        */
+        self.searchInner(root, &LibType::SelfLib, param, results)
+    }
+}
+
+impl CDependSearcher {
+    fn searchInner<'b>(&self, root: &'b str/*, libRoot: &str, libRel: &str*/, libType: &LibType, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
         let searchName = match &param.name {
             Some(n) => n,
             None => {
@@ -43,7 +57,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root, libType, path, param, results) {
                         return true;
                     };
                     true
@@ -58,7 +72,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig(root, libType, path, param, results) {
                         return true;
                     };
                     true
@@ -69,7 +83,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str, libType: &LibType, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -150,7 +164,7 @@ impl CDependSearcher {
         /*
         ** Find the directory where the specified name library name is located
         ** Search rule:
-        ** 1. Find the specified absolute path
+        ** 1. Find the specified run path
         ** 2. Find the specified relative path
         ** 3. In case of non-existence, use the default value
         */
@@ -179,7 +193,10 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
-                    if let Err(_) = self.search(value.root, &parse::git_lib::CGitLib{
+                    /*
+                    ** Get the lib search path of the dependent library
+                    */
+                    if let Err(_) = self.searchInner(value.root, &LibType::DependLib, &parse::git_lib::CGitLib{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
@@ -194,6 +211,90 @@ impl CDependSearcher {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+struct CSearchPath {
+    libRoot: String,
+    libRel: String
+}
+
+impl CDependSearcher {
+    /*
+    ** Find the directory where the library name is located based on the root directory and the library name
+    */
+    fn findLibParentDir(&self, root: &str, libName: &str) -> Option<String> {
+        let mut dir: Option<String> = None;
+        if let Err(err) = walk::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::Type| -> bool {
+            if name == libName {
+                let parent = match Path::new(path).parent() {
+                    Some(p) => p,
+                    None => {
+                        return true;
+                    }
+                };
+                let parent = match parent.to_str() {
+                    Some(p) => p,
+                    None => {
+                        return true;
+                    }
+                };
+                dir = Some(parent.to_string());
+                return false;
+            }
+            return true;
+        }) {
+            return None;
+        };
+        dir
+    }
+
+    /*
+    ** Get the library's own lib search path
+    */
+    fn getSelfLibSearch(&self, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> CSearchPath {
+        let mut searchPath = CSearchPath::default();
+        /*
+        ** search rule:
+        ** version attr -> package attr
+        */
+        match &libVesion.attributes {
+            Some(attr) => {
+                match &attr.libroot {
+                    Some(r) => {
+                        searchPath.libRoot = r.clone();
+                    },
+                    None => {
+                        searchPath.libRoot = calc::dynlibname::libroot_default.to_string();
+                    }
+                }
+                match &attr.libRel {
+                    Some(r) => {
+                    },
+                    None => {
+                    }
+                }
+            },
+            None => {
+                match &libPackage.libroot {
+                    Some(r) => {
+                        searchPath.libRoot = r.clone();
+                    },
+                    None => {
+                        searchPath.libRoot = calc::dynlibname::libroot_default.to_string();
+                    }
+                }
+            }
+        }
+        searchPath
+    }
+
+    /*
+    ** Get the lib search path of the dependent library
+    */
+    fn getDependLibSearch(&self, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion, lib: &config::libconfig::CLib) -> CSearchPath {
+        self.getSelfLibSearch(libPackage, libVesion)
     }
 }
 
