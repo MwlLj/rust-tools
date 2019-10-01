@@ -4,7 +4,9 @@ pub enum ValueType {
     Object,
     Array,
     Char,
-    Var
+    Var,
+    Start,
+    End
 }
 
 pub trait IJoin {
@@ -13,9 +15,6 @@ pub trait IJoin {
     fn on_field(&mut self, var: &str, field: &str) {}
     fn on_arr(&mut self, var: &str, index: &u32) {}
     fn on_value(&mut self, var: &str, t: &str, valueType: ValueType) {}
-    fn json_value(&self, var: &str) -> &JsonValue;
-    fn on_json_value(&mut self, jsonValue: &JsonValue) {}
-    fn on_json_end(&mut self, jsonValue: &JsonValue) {}
 }
 
 enum SymbolMode {
@@ -76,8 +75,9 @@ impl CJoinParser {
         let mut mode = Mode::Normal;
         let mut blockMode = BlockMode::Normal;
         let mut word = String::new();
-        let mut jsonValue = &JsonValue::Null;
+        // let mut jsonValue = &JsonValue::Null;
         let mut innerWord = String::new();
+        let mut innerLastMode = InnerMode::Normal;
         let mut innerMode = InnerMode::Normal;
         for c in chars {
             match mode {
@@ -112,8 +112,14 @@ impl CJoinParser {
                         },
                         BlockMode::Json => {
                             if c == '"' {
-                                jsonValue = &jsonValue[&innerWord];
-                                f.on_json_end(jsonValue);
+                                // jsonValue = &jsonValue[&innerWord];
+                                // f.on_json_end(jsonValue);
+                                match innerLastMode {
+                                    InnerMode::Array => {},
+                                    _ => {
+                                        f.on_value(&innerWord, "", ValueType::End);
+                                    }
+                                }
                                 blockMode = BlockMode::Normal;
                                 innerMode = InnerMode::Normal;
                                 innerWord.clear();
@@ -125,10 +131,14 @@ impl CJoinParser {
                                 match innerMode {
                                     InnerMode::Normal => {
                                         if c == '[' {
-                                            jsonValue = f.json_value(&innerWord);
+                                            // jsonValue = f.json_value(&innerWord);
+                                            f.on_value("", &innerWord, ValueType::Start);
+                                            innerWord.clear();
                                             innerMode = InnerMode::Array;
                                         } else if c == '.' {
-                                            jsonValue = f.json_value(&innerWord);
+                                            // jsonValue = f.json_value(&innerWord);
+                                            f.on_value("", &innerWord, ValueType::Start);
+                                            innerWord.clear();
                                             innerMode = InnerMode::Object;
                                         } else {
                                             innerWord.push(c);
@@ -136,9 +146,19 @@ impl CJoinParser {
                                     },
                                     InnerMode::Object => {
                                         if c == '.' {
-                                            jsonValue = &jsonValue[&innerWord];
-                                            f.on_json_value(jsonValue);
+                                            // jsonValue = &jsonValue[&innerWord];
+                                            // f.on_json_value(jsonValue);
+                                            match innerLastMode {
+                                                InnerMode::Array => {},
+                                                _ => {
+                                                    f.on_value("", &innerWord, ValueType::Object);
+                                                }
+                                            }
+                                            innerWord.clear();
+                                            innerLastMode = InnerMode::Object;
                                         } else if c == '[' {
+                                            f.on_value("", &innerWord, ValueType::Start);
+                                            innerWord.clear();
                                             innerMode = InnerMode::Array;
                                         } else {
                                             innerWord.push(c);
@@ -152,9 +172,12 @@ impl CJoinParser {
                                                     return Err("index is invalid");
                                                 }
                                             };
-                                            jsonValue = &jsonValue[index];
-                                            f.on_json_value(jsonValue);
+                                            // jsonValue = &jsonValue[index];
+                                            // f.on_json_value(jsonValue);
+                                            f.on_value("", &index.to_string(), ValueType::Array);
+                                            innerWord.clear();
                                             innerMode = InnerMode::Object;
+                                            innerLastMode = InnerMode::Array;
                                         } else {
                                             innerWord.push(c);
                                         }
@@ -248,12 +271,8 @@ mod test {
         fn on_arr(&mut self, var: &str, index: &u32) {
             println!("on_arr, {}, {}", var, index);
         }
-        fn json_value(&self, var: &str) -> &JsonValue {
-            &self.jsonValue
-        }
-        fn on_json_value(&mut self, jsonValue: &JsonValue) {
-        }
-        fn on_json_end(&mut self, jsonValue: &JsonValue) {
+        fn on_value(&mut self, var: &str, t: &str, valueType: ValueType) {
+            println!("var: {}, t: {}", var, t);
         }
     }
 
@@ -261,7 +280,12 @@ mod test {
     // #[ignore]
     fn joinParserTest() {
         // let s = "xxx.$platform.$extra[0].'$extra.name'.'$extra.objs[0].name.tests[1]'.'$extra.objs[0].name.tests[1]'.xxx.$version.yyy";
-        let s = "`json:\"extra.name\"``json:\"extra.objs[0]\"`";
+        let s = r#"
+        `json:"extra.name"`
+        `json:"extra"`
+        `json:"extra.objs[0].name"`
+        `json:"extra[0].name[0]"`
+        "#;
         println!("{:?}", s);
         let parser = CJoinParser::new();
         parser.parse(s, &mut CJoin{
