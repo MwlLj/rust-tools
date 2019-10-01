@@ -10,7 +10,9 @@ pub struct CPackage {
     pub platform: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
-    pub rule: Option<String>
+    pub rule: Option<String>,
+    pub libpathRule: Option<String>,
+    pub includeRule: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -18,7 +20,9 @@ pub struct CAttributes {
     pub platform: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
-    pub rule: Option<String>
+    pub rule: Option<String>,
+    pub libpathRule: Option<String>,
+    pub includeRule: Option<String>
 }
 
 /*
@@ -38,9 +42,7 @@ impl CAttributes {
 pub struct CLib {
     pub version: String,
     pub root: Option<String>,
-    pub no: u32,
-    pub librel: Option<String>,
-    pub libabs: Option<String>
+    pub no: u32
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

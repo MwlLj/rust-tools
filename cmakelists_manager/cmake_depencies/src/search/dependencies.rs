@@ -2,6 +2,7 @@ use crate::parse;
 use crate::config;
 use crate::calc;
 use super::structs;
+use crate::structs as cratestructs;
 
 use path::walk;
 
@@ -12,11 +13,17 @@ use std::fs;
 const lib_config_file_name: &str = "LibraryConfig.toml";
 const lib_config_file_suffix: &str = "library.config.toml";
 
+#[derive(Debug, Default)]
+pub struct CResults {
+    pub name: calc::dynlibname::CResult,
+    pub libpath: calc::dynlibpath::CResult
+}
+
 pub struct CDependSearcher {
 }
 
 impl CDependSearcher {
-    pub fn search<'b>(&self, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &'b str> {
+    pub fn search<'b>(&self, runArgs: &cratestructs::param::CRunArgs, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &'b str> {
         let searchName = match &param.name {
             Some(n) => n,
             None => {
@@ -43,7 +50,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig(runArgs, root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -58,7 +65,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig(runArgs, root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -69,7 +76,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<calc::dynlibname::CResult>) -> Result<(), &str> {
+    fn readLibConfig(&self, runArgs: &cratestructs::param::CRunArgs, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -118,42 +125,32 @@ impl CDependSearcher {
             }
         };
         // println!("{:?}", fullName);
-        results.push(fullName);
         /*
-        let mut names = Vec::new();
-        match &fullName.dr {
-            Some(name) => {
-                names.push(name);
-            },
+        ** Get the dependent library path
+        */
+        let parent = match Path::new(path).parent() {
+            Some(p) => p,
             None => {
-                match &fullName.debug {
-                    Some(name) => {
-                        names.push(name);
-                    },
-                    None => {
-                        println!("[Warning denug is None]");
-                        return Ok(());
-                    }
-                }
-                match &fullName.release {
-                    Some(name) => {
-                        names.push(name);
-                    },
-                    None => {
-                        println!("[Warning release is None]");
-                        return Ok(());
-                    }
-                }
+                return Err("get parent dir error");
             }
-        }
-        */
-        /*
-        ** Find the directory where the specified name library name is located
-        ** Search rule:
-        ** 1. Find the specified absolute path
-        ** 2. Find the specified relative path
-        ** 3. In case of non-existence, use the default value
-        */
+        };
+        let parent = match parent.as_os_str().to_str() {
+            Some(s) => s,
+            None => {
+                return Err("parent to_str error");
+            }
+        };
+        // println!("path: {}, parent: {}", path, parent);
+        let libpath = match calc::dynlibpath::get(runArgs, parent, searchVersion, &libConfig.package, dependVersion) {
+            Some(l) => l,
+            None => {
+                return Err("calc libpath error");
+            }
+        };
+        results.push(CResults{
+            name: fullName,
+            libpath: libpath
+        });
         // depends
         match &dependVersion.dependencies {
             Some(depends) => {
@@ -179,7 +176,7 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
-                    if let Err(_) = self.search(value.root, &parse::git_lib::CGitLib{
+                    if let Err(_) = self.search(runArgs, value.root, &parse::git_lib::CGitLib{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
@@ -210,7 +207,12 @@ mod test {
     #[ignore]
     fn dependSearcherTest() {
         let searcher = CDependSearcher::new();
-        searcher.search(".", &parse::git_lib::CGitLib{
+        searcher.search(&cratestructs::param::CRunArgs{
+            target: None,
+            platform: None,
+            extraType: None,
+            extra: None
+        }, ".", &parse::git_lib::CGitLib{
             name: Some("test".to_string()),
             version: Some("0.1.10".to_string()),
             platform: Some("${FILE_PREFIX}".to_string()),

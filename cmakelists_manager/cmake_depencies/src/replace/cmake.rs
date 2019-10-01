@@ -1,6 +1,6 @@
 use crate::parse::git_lib;
 use crate::search;
-use crate::calc;
+use crate::structs;
 
 use cmakelists_parse::parser::grammar::{CGrammar, ICall};
 
@@ -27,6 +27,7 @@ enum WriteStatus {
 struct CCall {
     content: String,
     writeStauts: WriteStatus,
+    runArgs: structs::param::CRunArgs,
     root: String,
     linkDirectoriesIndex: usize
 }
@@ -57,7 +58,7 @@ impl ICall for CCall {
             */
             let searcher = search::dependencies::CDependSearcher::new();
             let mut results = Vec::new();
-            if let Err(err) = searcher.search(&self.root, &params, &mut results) {
+            if let Err(err) = searcher.search(&self.runArgs, &self.root, &params, &mut results) {
                 println!("search error, err: {}", err);
                 return;
             };
@@ -67,12 +68,13 @@ impl ICall for CCall {
             */
             let startLen = self.content.len();
             for result in results.iter() {
-                match &result.dr {
+                let fullName = &result.name;
+                match &fullName.dr {
                     Some(name) => {
                         self.content.push_str(&name);
                     },
                     None => {
-                        match &result.debug {
+                        match &fullName.debug {
                             Some(name) => {
                                 self.content.push_str(cmake_keyword_debug);
                                 self.content.push_str(" ");
@@ -84,7 +86,7 @@ impl ICall for CCall {
                             }
                         }
                         self.content.push_str(" ");
-                        match &result.release {
+                        match &fullName.release {
                             Some(name) => {
                                 self.content.push_str(cmake_keyword_release);
                                 self.content.push_str(" ");
@@ -100,22 +102,42 @@ impl ICall for CCall {
                         self.content.push_str("\n");
                     }
                 }
+                /*
+                ** Record the total length after insertion
+                */
+                let endLen = self.content.len();
+                /*
+                ** Calculate the length of this insertion
+                */
+                let writeLen = endLen - startLen;
+                /*
+                ** If self.linkDirectoriesIndex == 0,
+                ** indicating that linkDirectories appears after this insertion,
+                ** add self.linkDirectoriesIndex to this accumulated length.
+                */
+                self.plusOffset(writeLen);
+                /*
+                ** Insert path include path
+                */
+                match &result.libpath.libpath {
+                    Some(path) => {
+                        self.content.insert(self.linkDirectoriesIndex, '"');
+                        self.linkDirectoriesIndex += 1;
+                        self.content.insert_str(self.linkDirectoriesIndex, &path);
+                        self.linkDirectoriesIndex += path.len();
+                        self.content.insert(self.linkDirectoriesIndex, '"');
+                        self.linkDirectoriesIndex += 1;
+                        if cfg!(target_os="windows") {
+                            self.content.insert(self.linkDirectoriesIndex, '\r');
+                            self.linkDirectoriesIndex += 1;
+                        }
+                        self.content.insert(self.linkDirectoriesIndex, '\n');
+                        self.linkDirectoriesIndex += 1;
+                    },
+                    None => {}
+                }
             }
             println!("{:?}, {:?}", &params, &results);
-            /*
-            ** Record the total length after insertion
-            */
-            let endLen = self.content.len();
-            /*
-            ** Calculate the length of this insertion
-            */
-            let writeLen = endLen - startLen;
-            /*
-            ** If self.linkDirectoriesIndex == 0,
-            ** indicating that linkDirectories appears after this insertion,
-            ** add self.linkDirectoriesIndex to this accumulated length.
-            */
-            self.plusOffset(writeLen);
             // println!("{:?}", params);
         }
         /*
@@ -178,10 +200,11 @@ impl CCall {
 }
 
 impl CCall {
-    fn new(root: &str) -> CCall {
+    fn new(runArgs: &structs::param::CRunArgs, root: &str) -> CCall {
         CCall{
             content: String::new(),
             writeStauts: WriteStatus::Write,
+            runArgs: runArgs.clone(),
             root: root.to_string(),
             linkDirectoriesIndex: 0
         }
@@ -190,12 +213,13 @@ impl CCall {
 
 struct CCmakeParser {
     parser: CGrammar,
+    runArgs: structs::param::CRunArgs,
     root: String
 }
 
 impl CCmakeParser {
     pub fn parse(&self, path: &str) -> Result<(), &str> {
-        let mut call = CCall::new(&self.root);
+        let mut call = CCall::new(&self.runArgs, &self.root);
         if let Err(err) = self.parser.parse(path, &mut call) {
             return Err(err);
         };
@@ -221,9 +245,10 @@ impl CCmakeParser {
 }
 
 impl CCmakeParser {
-    pub fn new(root: &str) -> CCmakeParser {
+    pub fn new(runArgs: &structs::param::CRunArgs, root: &str) -> CCmakeParser {
         CCmakeParser{
             parser: CGrammar::new(),
+            runArgs: runArgs.clone(),
             root: root.to_string()
         }
     }
@@ -233,9 +258,9 @@ impl CCmakeParser {
 mod test {
     use super::*;
     #[test]
-    // #[ignore]
+    #[ignore]
     fn cmakeParserTest() {
-        let parser = CCmakeParser::new(".");
+        let parser = CCmakeParser::new(&structs::param::CRunArgs::default(), ".");
         parser.parse("./doc/exe_cmake/CMakelists.config");
     }
 }

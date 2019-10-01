@@ -199,7 +199,9 @@ pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &confi
                 platform: Some(platform.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
-                rule: Some(rule.to_string())
+                rule: Some(rule.to_string()),
+                libpathRule: None,
+                includeRule: None
             }
         },
         None => {
@@ -231,7 +233,9 @@ pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &confi
                 platform: Some(platform.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
-                rule: Some(rule.to_string())
+                rule: Some(rule.to_string()),
+                libpathRule: None,
+                includeRule: None
             }
         }
     };
