@@ -28,3 +28,6 @@ version = "0.12"
 
 [dependencies.quick_sort]
 version = "0.2"
+
+[dependencies.path_abs]
+version = "0.5"

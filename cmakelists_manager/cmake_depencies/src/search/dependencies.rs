@@ -128,13 +128,13 @@ impl CDependSearcher {
         /*
         ** Get the dependent library path
         */
-        let parent = match Path::new(path).parent() {
+        let parentPath = match Path::new(path).parent() {
             Some(p) => p,
             None => {
                 return Err("get parent dir error");
             }
         };
-        let parent = match parent.as_os_str().to_str() {
+        let parent = match parentPath.as_os_str().to_str() {
             Some(s) => s,
             None => {
                 return Err("parent to_str error");
@@ -160,14 +160,21 @@ impl CDependSearcher {
                 let mut ds = Vec::new();
                 for (key, value) in depends.iter() {
                     let r = match &value.root {
-                        Some(r) => r,
-                        None => root
+                        Some(r) => {
+                            match parentPath.join(r).to_str() {
+                                Some(p) => p.to_string(),
+                                None => {
+                                    root.to_string()
+                                }
+                            }
+                        },
+                        None => root.to_string()
                     };
                     ds.push(structs::libs::CLibInfo{
                         name: &key,
                         version: &value.version,
                         no: &value.no,
-                        root: r
+                        root: &r
                     });
                 }
                 quick_sort::sort(&mut ds);

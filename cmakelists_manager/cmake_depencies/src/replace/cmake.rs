@@ -258,7 +258,7 @@ impl CCmakeParser {
 mod test {
     use super::*;
     #[test]
-    #[ignore]
+    // #[ignore]
     fn cmakeParserTest() {
         let parser = CCmakeParser::new(&structs::param::CRunArgs::default(), ".");
         parser.parse("./doc/exe_cmake/CMakelists.config");

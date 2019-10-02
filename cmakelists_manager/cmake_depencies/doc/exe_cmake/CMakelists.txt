@@ -16,9 +16,8 @@ INCLUDE_DIRECTORIES(
 )
 
 LINK_DIRECTORIES (
-	${LINK_LIBRARIES_DIR}"\\?\D:\liujun\github\rust-tools\cmakelists_manager\cmake_depencies\doc"
-"\\?\D:\liujun\github\rust-tools\cmakelists_manager\cmake_depencies\doc"
-"\\?\D:\liujun\github\rust-tools\cmakelists_manager\depencies_replace\doc"
+	${LINK_LIBRARIES_DIR}"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\lib\\0.1.10"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\lib\\0.1.0"
 
 )
 

@@ -3,11 +3,12 @@ use crate::config;
 use crate::structs;
 
 use json::{JsonValue};
+use path_abs::PathAbs;
 
 use std::path::Path;
 
-const libpath_rule_default: &str = "$config./lib/.'$version'./.'$target'./.'$platform'";
-const include_rule_default: &str = "'$config''$version'";
+const libpath_rule_default: &str = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`";
+const include_rule_default: &str = "`var:'config'``var:'version'";
 const platform_default: &str = "";
 const target_default: &str = "";
 
@@ -42,16 +43,18 @@ fn append(jsonValue: &JsonValue, result: &mut String) {
 }
 
 fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
-    parse::join::parse_with_fn(content
-    , &mut |var: &str, t: &str, valueType: parse::join::ValueType| {
-        // on_field
-        if var == keyword_extra {
+    parse::joinv2::parse(content
+    , &mut |t: &str, valueType: parse::joinv2::ValueType| {
+        if t == keyword_extra {
             match valueType {
-                parse::join::ValueType::Object => {
+                parse::joinv2::ValueType::Start => {
+                    extraJson = &extraJsonClone;
+                },
+                parse::joinv2::ValueType::Object => {
                     extraJson = &extraJson[t];
                     append(extraJson, result);
                 },
-                parse::join::ValueType::Array => {
+                parse::joinv2::ValueType::Array => {
                     match t.parse::<usize>() {
                         Ok(index) => {
                             extraJson = &extraJson[index];
@@ -63,14 +66,11 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                     }
                     append(extraJson, result);
                 },
-                parse::join::ValueType::Var => {
-                    extraJson = &extraJsonClone;
-                },
                 _ => {}
             }
         } else {
             match valueType {
-                parse::join::ValueType::Char => {
+                parse::joinv2::ValueType::Char => {
                     match t.parse::<char>() {
                         Ok(c) => {
                             result.push(c);
@@ -81,18 +81,17 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                         }
                     }
                 },
-                parse::join::ValueType::Var => {
-                    if var == keyword_platform {
+                parse::joinv2::ValueType::Var => {
+                    if t == keyword_platform {
                         result.push_str(platform);
-                    } else if var == keyword_target {
+                    } else if t == keyword_target {
                         result.push_str(target);
-                    } else if var == keyword_config {
-                        println!("configPath: {}", &configPath);
+                    } else if t == keyword_config {
                         result.push_str(configPath);
-                    } else if var == keyword_version {
+                    } else if t == keyword_version {
                         result.push_str(version);
                     }
-                },
+                }
                 _ => {}
             }
         }
@@ -219,9 +218,14 @@ pub fn get(runArgs: &structs::param::CRunArgs, configPath: &str, version: &str, 
     */
     match Path::new(&libpathValue).canonicalize() {
         Ok(p) => {
-            match p.as_os_str().to_str() {
+            match p.to_str() {
                 Some(s) => {
-                    r.libpath = Some(s.to_string());
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.libpath = Some(t);
+                    } else {
+                        r.libpath = Some(s.to_string());
+                    }
                 },
                 None => {
                     println!("[Error] libpath abs to_str error");
