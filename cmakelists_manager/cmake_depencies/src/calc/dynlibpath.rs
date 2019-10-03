@@ -43,6 +43,9 @@ fn append(jsonValue: &JsonValue, result: &mut String) {
 }
 
 fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+    let mut lastString = String::new();
+    let mut lastSymbol = String::new();
+    let mut lastIsSymbol = false;
     parse::joinv2::parse(content
     , &mut |t: &str, valueType: parse::joinv2::ValueType| {
         if t == keyword_extra {
@@ -91,7 +94,29 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                     } else if t == keyword_version {
                         result.push_str(version);
                     }
-                }
+                },
+                parse::joinv2::ValueType::Condition(condType) => {
+                    match condType {
+                        parse::joinv2::CondType::Symbol => {
+                            lastIsSymbol = true;
+                            lastSymbol = t.to_string();
+                        },
+                        parse::joinv2::CondType::Else => {
+                        },
+                        _ => {
+                            // json / str / var / judge
+                            if lastIsSymbol {
+                                // compare
+                                if lastSymbol == "==" {
+                                }
+                            } else {
+                                lastString = t.to_string();
+                            }
+                        }
+                    }
+                },
+                parse::joinv2::ValueType::JudgeBody => {
+                },
                 _ => {}
             }
         }
