@@ -3,7 +3,7 @@ pub struct CLibInfo<'a> {
     pub name: &'a str,
     pub version: &'a str,
     pub no: &'a u32,
-    pub root: &'a str
+    pub root: String
 }
 
 impl<'a> std::cmp::PartialEq for CLibInfo<'a> {

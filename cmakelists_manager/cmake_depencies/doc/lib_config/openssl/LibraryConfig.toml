@@ -1,5 +1,5 @@
 [package]
-name = "test"
+name = "openssl"
 authors = ''
 edition = ''
 # 根据 调用者在cmake中指定的字段拼接成自身的 platform
@@ -23,16 +23,8 @@ release = ""
 # $platform 表示 [package.platform] 计算的到的值
 # 中间可以添加 非 a~z A~Z 0~9
 rule = "$name$version$platform$d_r"
-# 相对该配置文件的 include 路径规则
-# 这里仍然存在拓展字段, 这里拓展字段是根据运行程序所传入的参数关联的
-# $version: 这里指定的版本
-# $platform: 命令行输入的参数
-# $target: 命令行输入的参数
-include_rule = "'$version'"
-# 相对该配置文件的 lib 路径规则
-libpath_rule = "'$version'/'$target'/'$platform'"
 
-[versions."0.1.10".attributes]
+[versions."0.1.0".attributes]
 # 以下四个参数和 [package] 中的使用方式一致
 # 如果每个版本有自己的attributes, 优先取版本下的attributes, 如果版本下不存在attributes, 则取 package 中的attributes
 # platform = "$platform"
@@ -40,19 +32,10 @@ platform = "abcd.'$extra.name'.'$extra.objs[0]'"
 debug = "_d"
 release = ""
 rule = "$name-$version-$platform$d_r"
-include_rule = "'$version'"
-libpath_rule = "'$version'/'$target'/'$platform'"
 
-[versions."0.1.10".dependencies]
-# librel: lib 相对 库名.library.config.toml / 库名/LibraryConfig.toml 的路径
-# libabs: 绝对路径, 默认不设置
-http_server = {version = "0.1.0", root = "..", no = 1}
-openssl = {version = "1.0.0", root = ".", no = 2}
-libcurl = {version = "1.0.0", root = ".", no = 3}
-libevent = {version = "1.0.0", root = ".", no = 4}
+[versions."1.0.0".dependencies]
 
 # [version."0.1.10".dependencies.http_server]
 # version = '0.1.0'
 
-[versions."0.1.11".dependencies]
-http_server = {version = "0.1.1", no = 1}
+[versions."1.1.0".dependencies]

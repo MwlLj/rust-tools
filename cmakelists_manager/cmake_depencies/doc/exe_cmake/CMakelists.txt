@@ -16,8 +16,9 @@ INCLUDE_DIRECTORIES(
 )
 
 LINK_DIRECTORIES (
-	${LINK_LIBRARIES_DIR}"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\lib\\0.1.10"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\lib\\0.1.0"
+	${LINK_LIBRARIES_DIR}"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0"
 
 )
 
@@ -90,7 +91,7 @@ ELSEIF (${OS} STREQUAL "LINUX")
 						${RELEASE_LINK_LIBRARIES}
 						debug test-0.1.10-abcd.m.1_d release test-0.1.10-abcd.m.1
 debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
-debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
+debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
 
 						awnet_common${FILE_PREFIX}
 						awnet_protocol${FILE_PREFIX}

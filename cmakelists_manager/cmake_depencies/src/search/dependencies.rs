@@ -174,7 +174,7 @@ impl CDependSearcher {
                         name: &key,
                         version: &value.version,
                         no: &value.no,
-                        root: &r
+                        root: r.to_string()
                     });
                 }
                 quick_sort::sort(&mut ds);
@@ -183,7 +183,7 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
-                    if let Err(_) = self.search(runArgs, value.root, &parse::git_lib::CGitLib{
+                    if let Err(_) = self.search(runArgs, &value.root, &parse::git_lib::CGitLib{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         platform: param.platform.clone(),
