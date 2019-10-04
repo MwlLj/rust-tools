@@ -21,31 +21,38 @@ const keyword_target: &str = "target";
 const keyword_platform: &str = "platform";
 const keyword_config: &str = "config";
 
-fn append(jsonValue: &JsonValue, result: &mut String) {
+fn append(jsonValue: &JsonValue, result: &mut String) -> String {
+	let mut r = String::new();
     match jsonValue {
         JsonValue::Null => {
         },
         JsonValue::Short(v) => {
             result.push_str(&v.to_string());
+            r = v.to_string();
             // println!("short: {}, result: {}", v, result);
         },
         JsonValue::String(v) => {
             result.push_str(&v);
+            r = v;
         },
         JsonValue::Number(v) => {
             result.push_str(&v.to_string());
+            r = v.to_string();
         },
         JsonValue::Boolean(v) => {
             result.push_str(&v.to_string());
+            r = v.to_string();
         },
         _ => {}
     }
+    r
 }
 
 fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
     let mut lastString = String::new();
     let mut lastSymbol = String::new();
-    let mut lastIsSymbol = false;
+    let mut lastIsJudgeSymbol = false;
+    let mut condIsEnd = false;
     parse::joinv2::parse(content
     , &mut |t: &str, valueType: parse::joinv2::ValueType| {
         if t == keyword_extra {
@@ -55,7 +62,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                 },
                 parse::joinv2::ValueType::Object => {
                     extraJson = &extraJson[t];
-                    append(extraJson, result);
+                    lastString = append(extraJson, result);
                 },
                 parse::joinv2::ValueType::Array => {
                     match t.parse::<usize>() {
@@ -67,7 +74,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                             return;
                         }
                     }
-                    append(extraJson, result);
+                    lastString = append(extraJson, result);
                 },
                 _ => {}
             }
@@ -87,31 +94,58 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                 parse::joinv2::ValueType::Var => {
                     if t == keyword_platform {
                         result.push_str(platform);
+                        lastString = platform.to_string();
                     } else if t == keyword_target {
                         result.push_str(target);
+                        lastString = target.to_string();
                     } else if t == keyword_config {
                         result.push_str(configPath);
+                        lastString = configPath.to_string();
                     } else if t == keyword_version {
                         result.push_str(version);
+                        lastString = version.to_string();
                     }
                 },
                 parse::joinv2::ValueType::Condition(condType) => {
                     match condType {
                         parse::joinv2::CondType::Symbol => {
-                            lastIsSymbol = true;
+                        	if t != "&&" && t != "||" {
+	                            lastIsJudgeSymbol = true;
+                        	}
                             lastSymbol = t.to_string();
                         },
                         parse::joinv2::CondType::Else => {
+                        	lastIsJudgeSymbol = false;
+                        	if !condIsEnd {
+                        		condIsEnd = true;
+                        	}
+                        },
+                        parse::joinv2::CondType::JudgeBody => {
+                        	lastSymbol = false;
+                        	if condIsEnd {
+                        		result.push_str(t);
+                        	}
                         },
                         _ => {
                             // json / str / var / judge
-                            if lastIsSymbol {
+                            if lastIsJudgeSymbol {
                                 // compare
-                                if lastSymbol == "==" {
-                                }
+                                if !condIsEnd {
+	                                if lastSymbol == "==" {
+	                                	if t == lastString {
+	                                		condIsEnd = true;
+	                                	}
+	                                } else if lastSymbol == "!=" {
+	                                	if t != lastString {
+	                                		condIsEnd = true;
+	                                	}
+	                                }
+	                            }
                             } else {
-                                lastString = t.to_string();
+                            	// if lastSymbol == "&&" && lastIsJudgeSymbol
+                                // lastString = t.to_string();
                             }
+                        	lastIsJudgeSymbol = false;
                         }
                     }
                 },
@@ -277,4 +311,38 @@ pub fn get(runArgs: &structs::param::CRunArgs, configPath: &str, version: &str, 
         }
     }
     Some(r)
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	#[test]
+	fn joinTest() {
+        let mut extraJson = match json::parse(&r#"
+	        {
+	            "extra": {
+	                "name": "jake",
+	                "objs": ["one", "two", "third"]
+	            }
+	        }
+        	"#) {
+            Ok(e) => e,
+            Err(err) => {
+                return None;
+            }
+        };
+	    let mut extraJsonClone = extraJson.clone();
+	    let mut result = String::new();
+		join(r#"
+        `judge:"
+        if json:'extra.name' == str:'win64' {
+            64
+        } elseif json:'extra.dr' == str:'debug' {
+            _d
+        } else {
+            _
+        }
+        "`
+			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, result);
+	}
 }
