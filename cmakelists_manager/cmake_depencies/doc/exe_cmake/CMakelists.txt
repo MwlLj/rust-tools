@@ -1,3 +1,7 @@
+set(git_librarys
+	
+)
+
 INCLUDE_DIRECTORIES(
 	${HEADER_DIR}
 	${THIRD_HEADER_DIR}
@@ -16,10 +20,7 @@ INCLUDE_DIRECTORIES(
 )
 
 LINK_DIRECTORIES (
-	${LINK_LIBRARIES_DIR}"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0"
-
+	${LINK_LIBRARIES_DIR}
 )
 
 SET(TARGET_NAME iotas_acd_hk${FILE_PREFIX})
@@ -57,21 +58,10 @@ SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES DEBUG_POSTFIX "_d")
 
 IF (${OS} STREQUAL "WINDOWS")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-						${DEBUG_LINK_LIBRARIES}
-						${RELEASE_LINK_LIBRARIES}
-						awnet_client${FILE_PREFIX}
-						debug minizip${FILE_PREFIX}_d optimized minizip${FILE_PREFIX}
-						libevent libevent_core libevent_extras
-						libevent_openssl
-						libcrypto libssl libeay32 ssleay32
-						debug jsonconverter_d optimized jsonconverter
-						debug jsoncpp_d optimized jsoncpp
-						debug log4cplusUD optimized log4cplusU
-						debug libcurl-d_imp optimized libcurl_imp
-						debug mimetic64_d optimized mimetic64
-						sqlite3
-						HCNetSDK
-						ws2_32
+			debug test-0.1.10-abcd.m.1_d release test-0.1.10-abcd.m.1
+debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
+debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
+
 		)
 		
 		INSTALL (TARGETS ${TARGET_NAME} RUNTIME CONFIGURATIONS Release DESTINATION ${TARGET_INSTALL_DIR})
@@ -87,34 +77,10 @@ IF (${OS} STREQUAL "WINDOWS")
 		INSTALL (FILES "${INSTALL_BIN_DIR}/third_dll/mosquitto_broker/broker.dll" DESTINATION ${TARGET_INSTALL_DIR})
 ELSEIF (${OS} STREQUAL "LINUX")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-						${DEBUG_LINK_LIBRARIES}
-						${RELEASE_LINK_LIBRARIES}
 						debug test-0.1.10-abcd.m.1_d release test-0.1.10-abcd.m.1
 debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
 debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
 
-						awnet_common${FILE_PREFIX}
-						awnet_protocol${FILE_PREFIX}
-						mosq_connection${FILE_PREFIX}
-						minizip${FILE_PREFIX}
-						jsonconverter
-						http_server
-						mosquitto
-						rabbitmq
-						debug mimetic_d optimized mimetic
-						curl7.55.1
-						jsoncpp
-						log4cplus
-						uuid
-						sqlite3
-						event event_core event_extra event_openssl
-						ssl1.1.0f
-						crypto1.1.0f
-						hcnetsdk
-						dl
-						hcnetsdk
-						z
-						rt
 		)
 
 		IF (${CMAKE_BUILD_TYPE} STREQUAL "Release")

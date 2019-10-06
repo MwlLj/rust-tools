@@ -228,30 +228,30 @@ pub struct CResult {
     pub include: Option<String>
 }
 
-pub fn get(runArgs: &structs::param::CRunArgs, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+pub fn get(exeParam: &parse::git_lib::CGitLib, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
     */
-    let extraType = match &runArgs.extraType {
+    let extraType = match &exeParam.extraType {
         Some(e) => e,
         None => {
             extra_type_string
         }
     };
-    let extra = match &runArgs.extra {
+    let extra = match &exeParam.extra {
         Some(e) => e,
         None => {
             ""
         }
     };
-    let runPlatform  = match &runArgs.platform {
+    let platform  = match &exeParam.platform {
         Some(p) => p,
         None => {
             platform_default
         }
     };
-    let runTarget = match &runArgs.target {
+    let target = match &exeParam.target {
         Some(t) => t,
         None => {
             target_default
@@ -326,13 +326,13 @@ pub fn get(runArgs: &structs::param::CRunArgs, configPath: &str, version: &str, 
     */
     let mut libpathValue = String::new();
     // println!("attr: {:?}", &attributes);
-    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, runPlatform, runTarget, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
     println!("{:?}", &libpathValue);
     let mut includeValue = String::new();
-    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, runPlatform, runTarget, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -383,7 +383,7 @@ mod test {
 	use super::*;
 
 	#[test]
-    // #[ignore]
+    #[ignore]
 	fn joinTest() {
         let mut extraJson = match json::parse(&r#"
 	        {

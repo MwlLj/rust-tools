@@ -24,7 +24,14 @@ pub struct CDependSearcher {
 
 impl CDependSearcher {
     pub fn search<'b>(&self, runArgs: &cratestructs::param::CRunArgs, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &'b str> {
-        let searchName = match &param.name {
+        let librarys = match &param.library {
+            Some(n) => n,
+            None => {
+                println!("librarys field is not found");
+                return Err("librarys field is not found");
+            }
+        };
+        let searchName = match &librarys.name {
             Some(n) => n,
             None => {
                 println!("name field is not found");
@@ -92,7 +99,14 @@ impl CDependSearcher {
             }
         };
         // judge name is equal
-        let name = match &param.name {
+        let librarys = match &param.library {
+            Some(n) => n,
+            None => {
+                println!("librarys field is not found");
+                return Err("librarys field is not found");
+            }
+        };
+        let name = match &librarys.name {
             Some(n) => n,
             None => {
                 println!("name field is not found");
@@ -103,7 +117,7 @@ impl CDependSearcher {
             println!("[Warning] name is not equal, name: {}", name);
         }
         // find version dependencies
-        let searchVersion = match &param.version {
+        let searchVersion = match &librarys.version {
             Some(v) => v,
             None => {
                 println!("version field is not found");
@@ -141,7 +155,7 @@ impl CDependSearcher {
             }
         };
         // println!("path: {}, parent: {}", path, parent);
-        let libpath = match calc::dynlibpath::get(runArgs, parent, searchVersion, &libConfig.package, dependVersion) {
+        let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
             Some(l) => l,
             None => {
                 return Err("calc libpath error");
@@ -184,9 +198,12 @@ impl CDependSearcher {
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
                     if let Err(_) = self.search(runArgs, &value.root, &parse::git_lib::CGitLib{
-                        name: Some(value.name.to_string()),
-                        version: Some(value.version.to_string()),
+                        library: Some(&parse::git_librarys::CGitLibrarys{
+                            name: Some(value.name.to_string()),
+                            version: Some(value.version.to_string())
+                        }),
                         platform: param.platform.clone(),
+                        target: param.target.clone(),
                         extra: param.extra.clone(),
                         extraType: param.extraType.clone()
                     }, results) {
@@ -213,16 +230,16 @@ mod test {
     #[test]
     #[ignore]
     fn dependSearcherTest() {
+        let librarys = parse::git_librarys::CGitLibrarys{
+            name: Some("test".to_string()),
+            version: Some("0.1.10".to_string())
+        };
         let searcher = CDependSearcher::new();
         searcher.search(&cratestructs::param::CRunArgs{
-            target: None,
-            platform: None,
-            extraType: None,
-            extra: None
         }, ".", &parse::git_lib::CGitLib{
-            name: Some("test".to_string()),
-            version: Some("0.1.10".to_string()),
+            library: Some(&librarys),
             platform: Some("${FILE_PREFIX}".to_string()),
+            target: Some("win64".to_string()),
             // platform: Some("".to_string()),
             extra: Some("{\"name\": \"jake\", \"objs\": [\"1\", \"2\", \"3\"]}".to_string()),
             extraType: Some("json".to_string())

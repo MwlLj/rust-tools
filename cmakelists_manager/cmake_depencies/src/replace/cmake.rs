@@ -1,4 +1,5 @@
 use crate::parse::git_lib;
+use crate::parse::git_librarys;
 use crate::search;
 use crate::structs;
 
@@ -9,6 +10,8 @@ use std::fs;
 
 const keyword_git_include: &str = "git_include";
 const keyword_git_lib: &str = "git_lib";
+const keyword_git_librarys: &str = "git_librarys";
+const keyword_set: &str = "set";
 
 const keyword_target_link_libraries: &str = "target_link_libraries";
 const keyword_link_directories: &str = "link_directories";
@@ -24,12 +27,19 @@ enum WriteStatus {
     StopWrite
 }
 
+enum Mode {
+    Normal,
+    GitLibrarys
+}
+
 struct CCall {
     content: String,
     writeStauts: WriteStatus,
     runArgs: structs::param::CRunArgs,
     root: String,
-    linkDirectoriesIndex: usize
+    linkDirectoriesIndex: usize,
+    mode: Mode,
+    gitLibrarys: Vec<git_librarys::CGitLibrarys>
 }
 
 impl ICall for CCall {
@@ -49,96 +59,29 @@ impl ICall for CCall {
 
     fn on_kv(&mut self, key: &str, value: &str) {
         // println!("key: {}, value: {}", key, value);
-        if value.starts_with(keyword_git_lib) {
-            let parser = git_lib::CGitLibParser::new();
-            let params = parser.parseFromStr(value);
-            self.removeContentRightLen(value.len() + 1);
-            /*
-            ** Get the collection of names of all libraries that specify the library and the specified library dependencies
-            */
-            let searcher = search::dependencies::CDependSearcher::new();
-            let mut results = Vec::new();
-            if let Err(err) = searcher.search(&self.runArgs, &self.root, &params, &mut results) {
-                println!("search error, err: {}", err);
-                return;
-            };
-            // println!("{:?}, {:?}", &params, &results);
-            /*
-            ** Record the total length before insertion
-            */
-            let startLen = self.content.len();
-            for result in results.iter() {
-                let fullName = &result.name;
-                match &fullName.dr {
-                    Some(name) => {
-                        self.content.push_str(&name);
-                    },
-                    None => {
-                        match &fullName.debug {
-                            Some(name) => {
-                                self.content.push_str(cmake_keyword_debug);
-                                self.content.push_str(" ");
-                                self.content.push_str(name);
-                            },
-                            None => {
-                                println!("[Warning debug is None]");
-                                continue;
-                            }
-                        }
-                        self.content.push_str(" ");
-                        match &fullName.release {
-                            Some(name) => {
-                                self.content.push_str(cmake_keyword_release);
-                                self.content.push_str(" ");
-                                self.content.push_str(&name);
-                            },
-                            None => {
-                                println!("[Warning release is None]");
-                                continue;
-                            }
-                        }
-                        #[cfg(target_os="windows")]
-                        self.content.push_str("\r");
-                        self.content.push_str("\n");
+        let k = key.to_ascii_lowercase();
+        let v = value.to_ascii_lowercase();
+        match self.mode {
+            Mode::Normal => {
+                if k == keyword_set && v == keyword_git_librarys {
+                    self.mode = Mode::GitLibrarys;
+                } else if v.starts_with(keyword_git_lib) {
+                    let mut librarys = Vec::new();
+                    {
+                        librarys = self.gitLibrarys.clone();
+                    }
+                    for library in librarys.iter() {
+                        self.join(key, value, library);
                     }
                 }
-                /*
-                ** Record the total length after insertion
-                */
-                let endLen = self.content.len();
-                /*
-                ** Calculate the length of this insertion
-                */
-                let writeLen = endLen - startLen;
-                /*
-                ** If self.linkDirectoriesIndex == 0,
-                ** indicating that linkDirectories appears after this insertion,
-                ** add self.linkDirectoriesIndex to this accumulated length.
-                */
-                self.plusOffset(writeLen);
-                /*
-                ** Insert path include path
-                */
-                match &result.libpath.libpath {
-                    Some(path) => {
-                        self.content.insert(self.linkDirectoriesIndex, '"');
-                        self.linkDirectoriesIndex += 1;
-                        self.content.insert_str(self.linkDirectoriesIndex, &path);
-                        self.linkDirectoriesIndex += path.len();
-                        self.content.insert(self.linkDirectoriesIndex, '"');
-                        self.linkDirectoriesIndex += 1;
-                        if cfg!(target_os="windows") {
-                            self.content.insert(self.linkDirectoriesIndex, '\r');
-                            self.linkDirectoriesIndex += 1;
-                        }
-                        self.content.insert(self.linkDirectoriesIndex, '\n');
-                        self.linkDirectoriesIndex += 1;
-                    },
-                    None => {}
-                }
-            }
-            println!("{:?}, {:?}", &params, &results);
-            // println!("{:?}", params);
+            },
+            Mode::GitLibrarys => {
+                self.removeContentRightLen(value.len() + 1);
+                let parser = git_librarys::CGitLibParser::new();
+                let params = parser.parseFromStr(&value);
+                self.gitLibrarys.push(params);
+            },
+            _ => {}
         }
         /*
         if key.to_ascii_lowercase() == keyword_link_directories.to_ascii_lowercase() {
@@ -159,6 +102,7 @@ impl ICall for CCall {
             // self.writeStauts = WriteStatus::Write;
             */
         }
+        self.mode = Mode::Normal;
     }
 
     fn on_ch(&mut self, c: char) {
@@ -183,6 +127,101 @@ impl ICall for CCall {
 }
 
 impl CCall {
+    fn join(&mut self, key: &str, value: &str, library: &git_librarys::CGitLibrarys) {
+        let parser = git_lib::CGitLibParser::new();
+        let mut params = parser.parseFromStr(&value);
+        params.library = Some(library);
+        self.removeContentRightLen(value.len() + 1);
+        /*
+        ** Get the collection of names of all libraries that specify the library and the specified library dependencies
+        */
+        let searcher = search::dependencies::CDependSearcher::new();
+        let mut results = Vec::new();
+        if let Err(err) = searcher.search(&self.runArgs, &self.root, &params, &mut results) {
+            println!("search error, err: {}", err);
+            return;
+        };
+        // println!("{:?}, {:?}", &params, &results);
+        /*
+        ** Record the total length before insertion
+        */
+        let startLen = self.content.len();
+        for result in results.iter() {
+            let fullName = &result.name;
+            match &fullName.dr {
+                Some(name) => {
+                    self.content.push_str(&name);
+                },
+                None => {
+                    match &fullName.debug {
+                        Some(name) => {
+                            self.content.push_str(cmake_keyword_debug);
+                            self.content.push_str(" ");
+                            self.content.push_str(name);
+                        },
+                        None => {
+                            println!("[Warning debug is None]");
+                            continue;
+                        }
+                    }
+                    self.content.push_str(" ");
+                    match &fullName.release {
+                        Some(name) => {
+                            self.content.push_str(cmake_keyword_release);
+                            self.content.push_str(" ");
+                            self.content.push_str(&name);
+                        },
+                        None => {
+                            println!("[Warning release is None]");
+                            continue;
+                        }
+                    }
+                    #[cfg(target_os="windows")]
+                    self.content.push_str("\r");
+                    self.content.push_str("\n");
+                }
+            }
+            /*
+            ** Record the total length after insertion
+            */
+            let endLen = self.content.len();
+            /*
+            ** Calculate the length of this insertion
+            */
+            let writeLen = endLen - startLen;
+            /*
+            ** If self.linkDirectoriesIndex == 0,
+            ** indicating that linkDirectories appears after this insertion,
+            ** add self.linkDirectoriesIndex to this accumulated length.
+            */
+            self.plusOffset(writeLen);
+            /*
+            ** Insert path include path
+            */
+            /*
+            match &result.libpath.libpath {
+                Some(path) => {
+                    self.content.insert(self.linkDirectoriesIndex, '"');
+                    self.linkDirectoriesIndex += 1;
+                    self.content.insert_str(self.linkDirectoriesIndex, &path);
+                    self.linkDirectoriesIndex += path.len();
+                    self.content.insert(self.linkDirectoriesIndex, '"');
+                    self.linkDirectoriesIndex += 1;
+                    if cfg!(target_os="windows") {
+                        self.content.insert(self.linkDirectoriesIndex, '\r');
+                        self.linkDirectoriesIndex += 1;
+                    }
+                    self.content.insert(self.linkDirectoriesIndex, '\n');
+                    self.linkDirectoriesIndex += 1;
+                },
+                None => {}
+            }
+            */
+        }
+        println!("{:?}, {:?}", &params, &results);
+        // println!("{:?}", params);
+    }
+
     fn removeContentRightLen(&mut self, len: usize) {
         for i in 0..len {
             if self.content.len() == 0 {
@@ -206,7 +245,9 @@ impl CCall {
             writeStauts: WriteStatus::Write,
             runArgs: runArgs.clone(),
             root: root.to_string(),
-            linkDirectoriesIndex: 0
+            linkDirectoriesIndex: 0,
+            mode: Mode::Normal,
+            gitLibrarys: Vec::new()
         }
     }
 }
@@ -258,7 +299,7 @@ impl CCmakeParser {
 mod test {
     use super::*;
     #[test]
-    #[ignore]
+    // #[ignore]
     fn cmakeParserTest() {
         let parser = CCmakeParser::new(&structs::param::CRunArgs::default(), ".");
         parser.parse("./doc/exe_cmake/CMakelists.config");
