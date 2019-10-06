@@ -115,7 +115,9 @@ impl CJoinParser {
                     if c == '`' {
                         mode = Mode::Block;
                     } else {
-                        f.on_ch(c, parseMode);
+                        if !c.is_ascii_whitespace() {
+                            f.on_ch(c, parseMode);
+                        }
                     }
                 },
                 Mode::Block => {

@@ -192,6 +192,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                                     return Err(ValueError::Unknow);
                                 }
                             	if lastStrings[0] != lastStrings[1] {
+                                    code = ValueCode::DonotContinueJudge;
                             	}
                                 lastStrings.clear();
                             }
@@ -406,8 +407,6 @@ mod test {
             64
         } elseif json:'extra.dr' == str:'debug' {
             _d
-        } elseif str:'1' == str:'1' {
-            1
         } else {
             _
         }
