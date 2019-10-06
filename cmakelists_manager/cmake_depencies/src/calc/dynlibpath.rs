@@ -1,4 +1,4 @@
-use crate::parse;
+use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
 use crate::config;
 use crate::structs;
 
@@ -21,26 +21,22 @@ const keyword_target: &str = "target";
 const keyword_platform: &str = "platform";
 const keyword_config: &str = "config";
 
-fn append(jsonValue: &JsonValue, result: &mut String) -> String {
-	let mut r = String::new();
+fn jsonToString(jsonValue: &JsonValue) -> String {
+    let mut r = String::new();
     match jsonValue {
         JsonValue::Null => {
         },
         JsonValue::Short(v) => {
-            result.push_str(&v.to_string());
             r = v.to_string();
             // println!("short: {}, result: {}", v, result);
         },
         JsonValue::String(v) => {
-            result.push_str(&v);
-            r = v;
+            r = v.to_string();
         },
         JsonValue::Number(v) => {
-            result.push_str(&v.to_string());
             r = v.to_string();
         },
         JsonValue::Boolean(v) => {
-            result.push_str(&v.to_string());
             r = v.to_string();
         },
         _ => {}
@@ -48,112 +44,180 @@ fn append(jsonValue: &JsonValue, result: &mut String) -> String {
     r
 }
 
+fn append(jsonValue: &JsonValue, result: &mut String) -> String {
+    let r = jsonToString(jsonValue);
+    result.push_str(&r);
+    r
+}
+
 fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
     let mut lastString = String::new();
+    let mut lastStrings = Vec::new();
     let mut lastSymbol = String::new();
     let mut lastIsJudgeSymbol = false;
-    let mut condIsEnd = false;
     parse::joinv2::parse(content
-    , &mut |t: &str, valueType: parse::joinv2::ValueType| {
-        if t == keyword_extra {
-            match valueType {
-                parse::joinv2::ValueType::Start => {
-                    extraJson = &extraJsonClone;
-                },
-                parse::joinv2::ValueType::Object => {
-                    extraJson = &extraJson[t];
-                    lastString = append(extraJson, result);
-                },
-                parse::joinv2::ValueType::Array => {
-                    match t.parse::<usize>() {
-                        Ok(index) => {
-                            extraJson = &extraJson[index];
-                        },
-                        Err(err) => {
-                            println!("[Error] index change error, err: {}", err);
-                            return;
+    , &mut |t: &str, parseMode: &parse::joinv2::ParseMode, valueType: parse::joinv2::ValueType| -> Result<ValueCode, ValueError> {
+        // println!("t: {}, parseMode: {:?}, valueType: {:?}", t, parseMode, valueType);
+        match valueType {
+            parse::joinv2::ValueType::Start => {
+                extraJson = &extraJsonClone;
+                extraJson = &extraJson[t];
+            },
+            parse::joinv2::ValueType::Object => {
+                extraJson = &extraJson[t];
+            },
+            parse::joinv2::ValueType::End
+                | parse::joinv2::ValueType::EndAfterArray => {
+                match valueType {
+                    parse::joinv2::ValueType::End => {
+                        extraJson = &extraJson[t];
+                    },
+                    _ => {}
+                }
+                match parseMode {
+                    parse::joinv2::ParseMode::JudgeSub => {
+                        // lastString = jsonToString(extraJson);
+                        lastStrings.push(jsonToString(extraJson));
+                    },
+                    parse::joinv2::ParseMode::Normal => {
+                        append(extraJson, result);
+                    },
+                    _ => {}
+                }
+            },
+            parse::joinv2::ValueType::Array => {
+                match t.parse::<usize>() {
+                    Ok(index) => {
+                        extraJson = &extraJson[index];
+                    },
+                    Err(err) => {
+                        println!("[Error] index change error, err: {}", err);
+                        return Err(ValueError::Unknow);
+                    }
+                }
+            },
+            parse::joinv2::ValueType::Char => {
+                match t.parse::<char>() {
+                    Ok(c) => {
+                        match parseMode {
+                            parse::joinv2::ParseMode::Normal => {
+                                result.push(c);
+                            },
+                            _ => {}
                         }
+                    },
+                    Err(err) => {
+                        println!("[Error] index change error, err: {}", err);
+                        return Err(ValueError::Unknow);
                     }
-                    lastString = append(extraJson, result);
-                },
-                _ => {}
-            }
-        } else {
-            match valueType {
-                parse::joinv2::ValueType::Char => {
-                    match t.parse::<char>() {
-                        Ok(c) => {
-                            result.push(c);
+                }
+            },
+            parse::joinv2::ValueType::Var => {
+                if t == keyword_platform {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = platform.to_string();
+                            lastStrings.push(platform.to_string());
                         },
-                        Err(err) => {
-                            println!("[Error] index change error, err: {}", err);
-                            return;
-                        }
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(platform);
+                        },
+                        _ => {}
                     }
-                },
-                parse::joinv2::ValueType::Var => {
-                    if t == keyword_platform {
-                        result.push_str(platform);
-                        lastString = platform.to_string();
-                    } else if t == keyword_target {
-                        result.push_str(target);
-                        lastString = target.to_string();
-                    } else if t == keyword_config {
-                        result.push_str(configPath);
-                        lastString = configPath.to_string();
-                    } else if t == keyword_version {
-                        result.push_str(version);
-                        lastString = version.to_string();
+                } else if t == keyword_target {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = target.to_string();
+                            lastStrings.push(target.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(target);
+                        },
+                        _ => {}
                     }
-                },
-                parse::joinv2::ValueType::Condition(condType) => {
-                    match condType {
-                        parse::joinv2::CondType::Symbol => {
-                        	if t != "&&" && t != "||" {
-	                            lastIsJudgeSymbol = true;
-                        	}
-                            lastSymbol = t.to_string();
+                } else if t == keyword_config {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = configPath.to_string();
+                            lastStrings.push(configPath.to_string());
                         },
-                        parse::joinv2::CondType::Else => {
-                        	lastIsJudgeSymbol = false;
-                        	if !condIsEnd {
-                        		condIsEnd = true;
-                        	}
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(configPath);
                         },
-                        parse::joinv2::CondType::JudgeBody => {
-                        	lastSymbol = false;
-                        	if condIsEnd {
-                        		result.push_str(t);
-                        	}
+                        _ => {}
+                    }
+                } else if t == keyword_version {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = version.to_string();
+                            lastStrings.push(version.to_string());
                         },
-                        _ => {
-                            // json / str / var / judge
-                            if lastIsJudgeSymbol {
-                                // compare
-                                if !condIsEnd {
-	                                if lastSymbol == "==" {
-	                                	if t == lastString {
-	                                		condIsEnd = true;
-	                                	}
-	                                } else if lastSymbol == "!=" {
-	                                	if t != lastString {
-	                                		condIsEnd = true;
-	                                	}
-	                                }
-	                            }
-                            } else {
-                            	// if lastSymbol == "&&" && lastIsJudgeSymbol
-                                // lastString = t.to_string();
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(version);
+                        },
+                        _ => {}
+                    }
+                }
+            },
+            parse::joinv2::ValueType::Condition(condType) => {
+                // println!("{:?}, {}", t, &lastString);
+                match condType {
+                    parse::joinv2::CondType::Symbol => {
+                    	if t != "&&" && t != "||" {
+                            lastIsJudgeSymbol = true;
+                    	}
+                        lastSymbol = t.to_string();
+                    },
+                    parse::joinv2::CondType::Else => {
+                    	lastIsJudgeSymbol = false;
+                    },
+                    _ => {
+                        // json / str / var / judge
+                        let mut code = ValueCode::Normal;
+                        if lastIsJudgeSymbol {
+                            println!("{:?}", &lastStrings);
+                            // compare
+                            if lastSymbol == "==" {
+                                if lastStrings.len() < 2 {
+                                    println!("equal error on both sides");
+                                    return Err(ValueError::Unknow);
+                                }
+                            	if lastStrings[0] == lastStrings[1] {
+                                    code = ValueCode::DonotContinueJudge;
+                            	}
+                                lastStrings.clear();
+                            } else if lastSymbol == "!=" {
+                                if lastStrings.len() < 2 {
+                                    println!("unequal error on both sides");
+                                    return Err(ValueError::Unknow);
+                                }
+                            	if lastStrings[0] != lastStrings[1] {
+                            	}
+                                lastStrings.clear();
                             }
-                        	lastIsJudgeSymbol = false;
                         }
+                    	lastIsJudgeSymbol = false;
+                        return Ok(code);
                     }
-                },
-                parse::joinv2::ValueType::JudgeBody => {
-                },
-                _ => {}
+                }
+            },
+            parse::joinv2::ValueType::JudgeBody => {
+                result.push_str(t);
+            },
+            parse::joinv2::ValueType::Str => {
+                match parseMode {
+                    ParseMode::Normal => {
+                        result.push_str(t);
+                    },
+                    ParseMode::JudgeSub => {
+                        lastStrings.push(t.to_string());
+                    },
+                    _ => {}
+                }
             }
+            _ => {}
         }
+        Ok(ValueCode::Normal)
     })
 }
 
@@ -316,19 +380,22 @@ pub fn get(runArgs: &structs::param::CRunArgs, configPath: &str, version: &str, 
 #[cfg(test)]
 mod test {
 	use super::*;
+
 	#[test]
+    // #[ignore]
 	fn joinTest() {
         let mut extraJson = match json::parse(&r#"
 	        {
 	            "extra": {
-	                "name": "jake",
-	                "objs": ["one", "two", "third"]
+	                "name": "win32",
+	                "objs": ["one", "two", "third"],
+                    "dr": "release"
 	            }
 	        }
         	"#) {
             Ok(e) => e,
             Err(err) => {
-                return None;
+                return;
             }
         };
 	    let mut extraJsonClone = extraJson.clone();
@@ -339,10 +406,13 @@ mod test {
             64
         } elseif json:'extra.dr' == str:'debug' {
             _d
+        } elseif str:'1' == str:'1' {
+            1
         } else {
             _
         }
         "`
-			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, result);
+			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        println!("{:?}", result);
 	}
 }
