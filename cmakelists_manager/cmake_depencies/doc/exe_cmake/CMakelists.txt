@@ -18,8 +18,6 @@ INCLUDE_DIRECTORIES(
 	include/
 	${PROJECT_SOURCE_DIR}/03implement/svr16iotas_acd
 	"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\include\\0.1.10"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\include\\0.1.0"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\include\\1.0.0"
 
 )
 

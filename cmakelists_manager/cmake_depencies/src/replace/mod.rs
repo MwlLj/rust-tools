@@ -7,6 +7,7 @@ use search::dependencies::CSearchResult;
 use environments::CEnvironments;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -58,6 +59,7 @@ impl<'a> std::cmp::Ord for CContent<'a> {
 impl CReplace {
     fn search(&self, path: &str, root: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>) {
         let mut contents: HashMap<usize, String> = HashMap::new();
+        let mut libs: HashSet<String> = HashSet::new();
         for library in librarys.iter() {
             let mut results: Vec<Vec<CSearchResult>> = Vec::new();
             let searcher = CDependSearcher::new();
@@ -83,13 +85,26 @@ impl CReplace {
                             s.push_str("\n");
                         },
                         git_lib::ParamType::Include => {
-                            s.push('"');
-                            s.push_str(&item.name);
-                            s.push('"');
-                            if cfg!(target_os="windows") {
-                                s.push_str("\r");
+                            let name = match &library.name {
+                                Some(n) => n,
+                                None => {
+                                    println!("name is not exist");
+                                    return;
+                                }
+                            };
+                            match libs.get(name) {
+                                Some(_) => {},
+                                None => {
+                                    s.push('"');
+                                    s.push_str(&item.name);
+                                    s.push('"');
+                                    if cfg!(target_os="windows") {
+                                        s.push_str("\r");
+                                    }
+                                    s.push_str("\n");
+                                    libs.insert(name.to_string());
+                                }
                             }
-                            s.push_str("\n");
                         },
                         _ => {}
                     }
