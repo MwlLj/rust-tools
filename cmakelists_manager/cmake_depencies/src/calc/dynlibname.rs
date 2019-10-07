@@ -17,6 +17,9 @@ const keyword_version: &str = "version";
 const keyword_platform: &str = "platform";
 const keyword_d_r: &str = "d_r";
 
+const cmake_keyword_debug: &str = "debug";
+const cmake_keyword_release: &str = "release";
+
 struct CJoin<'a> {
     extraJsonValue: &'a mut JsonValue,
     result: String
@@ -123,6 +126,180 @@ fn join<'a, 'b:'a>(content: &'a str, platform: &str, mut extraJson: &'a JsonValu
     })
 }
 
+pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<String> {
+    /*
+    ** Determine the type of the extension field,
+    ** if it is a json type, it will be parsed
+    */
+    let extraType = match &exeParam.extraType {
+        Some(e) => e,
+        None => {
+            extra_type_string
+        }
+    };
+    let extra = match &exeParam.extra {
+        Some(e) => e,
+        None => {
+            ""
+        }
+    };
+    let exePlatform  = match &exeParam.platform {
+        Some(p) => p,
+        None => {
+            platform_default
+        }
+    };
+    let mut extraJson = JsonValue::Null;
+    if extraType == extra_type_string {
+    } else if extraType == extra_type_json {
+        extraJson = match json::parse(&extra) {
+            Ok(e) => e,
+            Err(err) => {
+                return None;
+            }
+        };
+    }
+    let mut extraJsonClone = extraJson.clone();
+    /*
+    ** Firstly find the splicing rules in each version.
+    ** If it does not exist, look for the overall splicing rules.
+    ** If none of them exist, set the default value.
+    */
+    let mut attributes = match &libVesion.attributes {
+        Some(a) => {
+            let platform = match &a.platform {
+                Some(p) => p,
+                None => {
+                    platform_default
+                }
+            };
+            let debug = match &a.debug {
+                Some(d) => d,
+                None => {
+                    debug_default
+                }
+            };
+            let release = match &a.release {
+                Some(r) => r,
+                None => {
+                    release_default
+                }
+            };
+            let rule = match &a.rule {
+                Some(r) => r,
+                None => {
+                    rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: Some(platform.to_string()),
+                debug: Some(debug.to_string()),
+                release: Some(release.to_string()),
+                rule: Some(rule.to_string()),
+                libpathRule: None,
+                includeRule: None
+            }
+        },
+        None => {
+            let platform = match &libPackage.platform {
+                Some(p) => p,
+                None => {
+                    platform_default
+                }
+            };
+            let debug = match &libPackage.debug {
+                Some(d) => d,
+                None => {
+                    debug_default
+                }
+            };
+            let release = match &libPackage.release {
+                Some(r) => r,
+                None => {
+                    release_default
+                }
+            };
+            let rule = match &libPackage.rule {
+                Some(r) => r,
+                None => {
+                    rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: Some(platform.to_string()),
+                debug: Some(debug.to_string()),
+                release: Some(release.to_string()),
+                rule: Some(rule.to_string()),
+                libpathRule: None,
+                includeRule: None
+            }
+        }
+    };
+    /*
+    ** Parse each field in the attributes,
+    ** and splice according to the parameters provided by the application,
+    ** and update each field of the attributes with the result.
+    */
+    let mut platformValue = String::new();
+    if let Err(err) = join(&attributes.platform.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut debugValue = String::new();
+    if let Err(err) = join(&attributes.debug.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut releaseValue = String::new();
+    if let Err(err) = join(&attributes.release.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    /*
+    ** Parse the rules and then combine the rules
+    */
+    let mut debugName = String::new();
+    let mut releaseName = String::new();
+    parse::rule::parse(&attributes.rule.unwrap(), &mut |t: &str, valueType: parse::rule::ValueType| {
+        match valueType {
+            parse::rule::ValueType::Var => {
+                if t == keyword_name {
+                    debugName.push_str(&libPackage.name);
+                    releaseName.push_str(&libPackage.name);
+                } else if t == keyword_platform {
+                    debugName.push_str(&platformValue);
+                    releaseName.push_str(&platformValue);
+                } else if t == keyword_version {
+                    debugName.push_str(version);
+                    releaseName.push_str(version);
+                } else if t == keyword_d_r {
+                    debugName.push_str(&debugValue);
+                    releaseName.push_str(&releaseValue);
+                }
+            },
+            parse::rule::ValueType::Char => {
+                debugName.push_str(t);
+                releaseName.push_str(t);
+            }
+        }
+    });
+    let mut result = String::new();
+    if debugName == releaseName {
+        result = releaseName;
+    } else {
+        // debug
+        result.push_str(cmake_keyword_debug);
+        result.push_str(" ");
+        result.push_str(&debugName);
+        result.push_str(" ");
+        // release
+        result.push_str(cmake_keyword_release);
+        result.push_str(" ");
+        result.push_str(&releaseName);
+    }
+    Some(result)
+}
+
 #[derive(Default, Debug)]
 pub struct CResult {
     pub debug: Option<String>,
@@ -130,7 +307,7 @@ pub struct CResult {
     pub dr: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+pub fn get1(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed

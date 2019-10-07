@@ -137,7 +137,7 @@ impl CCall {
         */
         let searcher = search::dependencies::CDependSearcher::new();
         let mut results = Vec::new();
-        if let Err(err) = searcher.search(&self.runArgs, &self.root, &params, &mut results) {
+        if let Err(err) = searcher.search1(&self.runArgs, &self.root, &params, &mut results) {
             println!("search error, err: {}", err);
             return;
         };
@@ -299,7 +299,7 @@ impl CCmakeParser {
 mod test {
     use super::*;
     #[test]
-    // #[ignore]
+    #[ignore]
     fn cmakeParserTest() {
         let parser = CCmakeParser::new(&structs::param::CRunArgs::default(), ".");
         parser.parse("./doc/exe_cmake/CMakelists.config");

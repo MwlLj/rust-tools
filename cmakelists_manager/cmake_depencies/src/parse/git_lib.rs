@@ -21,7 +21,31 @@ pub struct CGitLib<'a> {
     pub extraType: Option<String>
 }
 
-impl<'a> object::IObject for CGitLib<'a> {
+#[derive(Debug, Clone)]
+pub enum ParamType {
+    Unknow,
+    LibName,
+    LibPath,
+    Include
+}
+
+impl Default for ParamType {
+    fn default() -> ParamType {
+        ParamType::Unknow
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct CParam {
+    pub paramType: ParamType,
+    pub startIndex: usize,
+    pub platform: Option<String>,
+    pub target: Option<String>,
+    pub extra: Option<String>,
+    pub extraType: Option<String>
+}
+
+impl object::IObject for CParam {
     fn on_kv(&mut self, key: &str, value: &str) {
         if key == keyword_platform {
             self.platform = Some(value.to_string());
@@ -39,11 +63,11 @@ pub struct CGitLibParser {
 }
 
 impl CGitLibParser {
-    pub fn parseFromStr(&self, data: &str) -> CGitLib {
-        let mut gitlib = CGitLib::default();
+    pub fn parseFromStr(&self, data: &str) -> CParam {
+        let mut param = CParam::default();
         let parser = object::CObjectParser::new();
-        parser.parse(data, &mut gitlib);
-        gitlib
+        parser.parse(data, &mut param);
+        param
     }
 }
 

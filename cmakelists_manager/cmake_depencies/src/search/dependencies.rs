@@ -3,6 +3,9 @@ use crate::config;
 use crate::calc;
 use super::structs;
 use crate::structs as cratestructs;
+use parse::git_lib;
+use parse::git_librarys;
+use git_lib::ParamType;
 
 use path::walk;
 
@@ -19,11 +22,245 @@ pub struct CResults {
     pub libpath: calc::dynlibpath::CResult
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct CSearchResult {
+    pub startIndex: usize,
+    pub name: String,
+    pub paramType: git_lib::ParamType
+}
+
 pub struct CDependSearcher {
 }
 
 impl CDependSearcher {
-    pub fn search<'b>(&self, runArgs: &cratestructs::param::CRunArgs, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &'b str> {
+    pub fn search<'a>(&self, root: &'a str, library: &git_librarys::CGitLibrarys, params: &Vec<git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &'a str> {
+        let searchName = match &library.name {
+            Some(n) => n,
+            None => {
+                println!("name field is not found");
+                return Err("name field is not found");
+            }
+        };
+        walk::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::Type| -> bool {
+            match t {
+                walk::Type::Dir => {
+                    // dir
+                    if name != searchName {
+                        return true;
+                    }
+                    // find lib-name/LibraryConfig.toml
+                    let filePath = Path::new(path).join(lib_config_file_name);
+                    if !filePath.exists() {
+                        return true
+                    }
+                    let path = match filePath.to_str() {
+                        Some(p) => p,
+                        None => {
+                            println!("filePath to_str error");
+                            return true;
+                        }
+                    };
+                    if let Err(_) = self.readLibConfig(root, path, library, params, results) {
+                        return true;
+                    };
+                    true
+                },
+                walk::Type::File => {
+                    // file
+                    let mut n = String::new();
+                    n.push_str(searchName);
+                    n.push_str(".");
+                    n.push_str(lib_config_file_suffix);
+                    if name != n {
+                        return true;
+                    }
+                    // find lib.libraryconfig.toml
+                    if let Err(_) = self.readLibConfig(root, path, library, params, results) {
+                        return true;
+                    };
+                    true
+                }
+            }
+        })
+    }
+
+    fn readLibConfig(&self, root: &str, path: &str, library: &git_librarys::CGitLibrarys, params: &Vec<parse::git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &str> {
+        let content = match fs::read(path) {
+            Ok(f) => f,
+            Err(err) => {
+                println!("read lib config error, err: {}, path: {}", err, path);
+                return Err("read config file error");
+            }
+        };
+        let libConfig = match config::libconfig::parse(&content) {
+            Ok(c) => c,
+            Err(err) => {
+                println!("config file parse error, err: {}", err);
+                return Err("parse error");
+            }
+        };
+        // judge name is equal
+        let name = match &library.name {
+            Some(n) => n,
+            None => {
+                println!("name field is not found");
+                return Err("name field is not found");
+            }
+        };
+        if &libConfig.package.name != name {
+            println!("[Warning] name is not equal, name: {}", name);
+        }
+        // find version dependencies
+        let searchVersion = match &library.version {
+            Some(v) => v,
+            None => {
+                println!("version field is not found");
+                return Err("version field is not found");
+            }
+        };
+        let dependVersion = match libConfig.versions.get(searchVersion) {
+            Some(v) => v,
+            None => {
+                println!("search dependencies lib: {}, version: {} error, [not found]", name, searchVersion);
+                return Err("search failed");
+            }
+        };
+        let parentPath = match Path::new(path).parent() {
+            Some(p) => p,
+            None => {
+                return Err("get parent dir error");
+            }
+        };
+        let parent = match parentPath.as_os_str().to_str() {
+            Some(s) => s,
+            None => {
+                return Err("parent to_str error");
+            }
+        };
+        let mut rs = Vec::new();
+        for param in params {
+            match param.paramType {
+                ParamType::LibName => {
+                    // dynamic calc this version lib - full name
+                    let fullName = match calc::dynlibname::get(param, searchVersion, &libConfig.package, dependVersion) {
+                        Some(n) => n,
+                        None => {
+                            println!("calc full name error");
+                            return Err("calc full name error");
+                        }
+                    };
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: fullName,
+                        paramType: param.paramType.clone()
+                    });
+                },
+                ParamType::LibPath => {
+                    /*
+                    ** Get the dependent library path
+                    */
+                    // println!("path: {}, parent: {}", path, parent);
+                    let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+                        Some(l) => l,
+                        None => {
+                            println!("calc libpath error");
+                            return Err("calc libpath error");
+                        }
+                    };
+                    let libpath = match &libpath.libpath {
+                        Some(p) => p,
+                        None => {
+                            println!("get libpath error");
+                            return Err("get libpath error");
+                        }
+                    };
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: libpath.to_string(),
+                        paramType: param.paramType.clone()
+                    });
+                },
+                ParamType::Include => {
+                    /*
+                    ** Get the dependent library path
+                    */
+                    // println!("path: {}, parent: {}", path, parent);
+                    let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+                        Some(l) => l,
+                        None => {
+                            println!("calc include error");
+                            return Err("calc include error");
+                        }
+                    };
+                    let include = match &libpath.include {
+                        Some(p) => p,
+                        None => {
+                            println!("get include error");
+                            return Err("get include error");
+                        }
+                    };
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: include.to_string(),
+                        paramType: param.paramType.clone()
+                    });
+                },
+                _ => {
+                }
+            }
+        }
+        // println!("{:?}", fullName);
+        // println!("results.push: {:?}", &rs);
+        results.push(rs);
+        // depends
+        match &dependVersion.dependencies {
+            Some(depends) => {
+                /*
+                ** Sort depends on no field
+                */
+                let mut ds = Vec::new();
+                for (key, value) in depends.iter() {
+                    let r = match &value.root {
+                        Some(r) => {
+                            match parentPath.join(r).to_str() {
+                                Some(p) => p.to_string(),
+                                None => {
+                                    root.to_string()
+                                }
+                            }
+                        },
+                        None => root.to_string()
+                    };
+                    ds.push(structs::libs::CLibInfo{
+                        name: &key,
+                        version: &value.version,
+                        no: &value.no,
+                        root: r.to_string()
+                    });
+                }
+                quick_sort::sort(&mut ds);
+                // println!("{:?}", &ds);
+                for value in ds.iter() {
+                    // let mut p = param.clone();
+                    // p.name = Some(key.to_string());
+                    // p.version = Some(value.version.to_string());
+                    if let Err(_) = self.search(&value.root, &git_librarys::CGitLibrarys{
+                        name: Some(value.name.to_string()),
+                        version: Some(value.version.to_string())
+                    }, params, results) {
+                        return Err("search error");
+                    };
+                }
+            },
+            None => {
+            }
+        }
+        Ok(())
+    }
+}
+
+impl CDependSearcher {
+    pub fn search1<'b>(&self, runArgs: &cratestructs::param::CRunArgs, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &'b str> {
         let librarys = match &param.library {
             Some(n) => n,
             None => {
@@ -57,7 +294,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(runArgs, root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig1(runArgs, root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -72,7 +309,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(runArgs, root/*, defaultLibRel*/, path, param, results) {
+                    if let Err(_) = self.readLibConfig1(runArgs, root/*, defaultLibRel*/, path, param, results) {
                         return true;
                     };
                     true
@@ -83,7 +320,7 @@ impl CDependSearcher {
 }
 
 impl CDependSearcher {
-    fn readLibConfig(&self, runArgs: &cratestructs::param::CRunArgs, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &str> {
+    fn readLibConfig1(&self, runArgs: &cratestructs::param::CRunArgs, root: &str/*, defaultLibRel: &str*/, path: &str, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -132,7 +369,7 @@ impl CDependSearcher {
             }
         };
         // dynamic calc this version lib - full name
-        let fullName = match calc::dynlibname::get(param, searchVersion, &libConfig.package, dependVersion) {
+        let fullName = match calc::dynlibname::get1(param, searchVersion, &libConfig.package, dependVersion) {
             Some(n) => n,
             None => {
                 return Err("calc full name error");
@@ -155,7 +392,7 @@ impl CDependSearcher {
             }
         };
         // println!("path: {}, parent: {}", path, parent);
-        let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+        let libpath = match calc::dynlibpath::get1(param, parent, searchVersion, &libConfig.package, dependVersion) {
             Some(l) => l,
             None => {
                 return Err("calc libpath error");
@@ -197,7 +434,7 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
-                    if let Err(_) = self.search(runArgs, &value.root, &parse::git_lib::CGitLib{
+                    if let Err(_) = self.search1(runArgs, &value.root, &parse::git_lib::CGitLib{
                         library: Some(&parse::git_librarys::CGitLibrarys{
                             name: Some(value.name.to_string()),
                             version: Some(value.version.to_string())
@@ -235,7 +472,7 @@ mod test {
             version: Some("0.1.10".to_string())
         };
         let searcher = CDependSearcher::new();
-        searcher.search(&cratestructs::param::CRunArgs{
+        searcher.search1(&cratestructs::param::CRunArgs{
         }, ".", &parse::git_lib::CGitLib{
             library: Some(&librarys),
             platform: Some("${FILE_PREFIX}".to_string()),

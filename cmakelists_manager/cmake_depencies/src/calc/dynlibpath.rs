@@ -8,7 +8,7 @@ use path_abs::PathAbs;
 use std::path::Path;
 
 const libpath_rule_default: &str = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`";
-const include_rule_default: &str = "`var:'config'``var:'version'";
+const include_rule_default: &str = "`var:'config'`/include/`var:'version'";
 const platform_default: &str = "";
 const target_default: &str = "";
 
@@ -228,7 +228,163 @@ pub struct CResult {
     pub include: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CGitLib, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+    /*
+    ** Determine the type of the extension field,
+    ** if it is a json type, it will be parsed
+    */
+    let extraType = match &exeParam.extraType {
+        Some(e) => e,
+        None => {
+            extra_type_string
+        }
+    };
+    let extra = match &exeParam.extra {
+        Some(e) => e,
+        None => {
+            ""
+        }
+    };
+    let platform  = match &exeParam.platform {
+        Some(p) => p,
+        None => {
+            platform_default
+        }
+    };
+    let target = match &exeParam.target {
+        Some(t) => t,
+        None => {
+            target_default
+        }
+    };
+    let mut extraJson = JsonValue::Null;
+    if extraType == extra_type_string {
+    } else if extraType == extra_type_json {
+        extraJson = match json::parse(&extra) {
+            Ok(e) => e,
+            Err(err) => {
+                return None;
+            }
+        };
+    }
+    let mut extraJsonClone = extraJson.clone();
+    /*
+    ** Firstly find the splicing rules in each version.
+    ** If it does not exist, look for the overall splicing rules.
+    ** If none of them exist, set the default value.
+    */
+    let mut attributes = match &libVesion.attributes {
+        Some(a) => {
+            let libpathRule = match &a.libpathRule {
+                Some(d) => d,
+                None => {
+                    libpath_rule_default
+                }
+            };
+            let includeRule = match &a.includeRule {
+                Some(r) => r,
+                None => {
+                    include_rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string())
+            }
+        },
+        None => {
+            let libpathRule = match &libPackage.libpathRule {
+                Some(d) => d,
+                None => {
+                    libpath_rule_default
+                }
+            };
+            let includeRule = match &libPackage.includeRule {
+                Some(r) => r,
+                None => {
+                    include_rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string())
+            }
+        }
+    };
+    /*
+    ** Parse each field in the attributes,
+    ** and splice according to the parameters provided by the application,
+    ** and update each field of the attributes with the result.
+    */
+    let mut libpathValue = String::new();
+    // println!("attr: {:?}", &attributes);
+    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    // println!("###### {:?}", &libpathValue);
+    let mut includeValue = String::new();
+    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    // println!("###### {:?}", &includeValue);
+    let mut r = CResult::default();
+    /*
+    ** Get absolute path
+    */
+    match Path::new(&libpathValue).canonicalize() {
+        Ok(p) => {
+            match p.to_str() {
+                Some(s) => {
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.libpath = Some(t);
+                    } else {
+                        r.libpath = Some(s.to_string());
+                    }
+                },
+                None => {
+                    println!("[Error] libpath abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
+        }
+    };
+    match Path::new(&includeValue).canonicalize() {
+        Ok(p) => {
+            match p.as_os_str().to_str() {
+                Some(s) => {
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.include = Some(t);
+                    } else {
+                        r.include = Some(s.to_string());
+                    }
+                },
+                None => {
+                    println!("[Erorr] include abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] include rule kjoin path error");
+        }
+    }
+    Some(r)
+}
+
+pub fn get1(exeParam: &parse::git_lib::CGitLib, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
