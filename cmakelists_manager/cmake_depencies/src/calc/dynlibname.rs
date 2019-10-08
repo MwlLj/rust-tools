@@ -1,12 +1,13 @@
-use crate::parse;
+use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
 use crate::config;
 
 use json::{JsonValue};
 
-const platform_default: &str = "${FILE_PREFIX}";
+const platform_default: &str = "win64";
 const debug_default: &str = "_d";
 const release_default: &str = "";
-const rule_default: &str = "$name$version$platform$d_r";
+const rule_default: &str = "$name.$version.$platform$d_r";
+const target_default: &str = "";
 
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
@@ -15,115 +16,207 @@ const keyword_extra: &str = "extra";
 const keyword_name: &str = "name";
 const keyword_version: &str = "version";
 const keyword_platform: &str = "platform";
+const keyword_target: &str = "target";
 const keyword_d_r: &str = "d_r";
 
 const cmake_keyword_debug: &str = "debug";
 const cmake_keyword_release: &str = "release";
 
-struct CJoin<'a> {
-    extraJsonValue: &'a mut JsonValue,
-    result: String
-}
-
-impl<'a> parse::join::IJoin for CJoin<'a> {
-    fn on_ch(&mut self, c: char) {
-        self.result.push(c);
-    }
-
-    fn on_var(&mut self, var: &str) {
-        if var == keyword_extra {
-        }
-    }
-
-    fn on_field(&mut self, var: &str, field: &str) {
-        if var == keyword_extra {
-            // self.extraJsonValue = &mut self.extraJsonValue[field];
-        }
-    }
-
-    fn on_arr(&mut self, var: &str, index: &u32) {
-    }
-}
-
-impl<'a> CJoin<'a> {
-    fn new(extraJsonValue: &mut JsonValue) -> CJoin {
-        CJoin{
-            extraJsonValue: extraJsonValue,
-            result: String::new()
-        }
-    }
-}
-
-fn append(jsonValue: &JsonValue, result: &mut String) {
+fn jsonToString(jsonValue: &JsonValue) -> String {
+    let mut r = String::new();
     match jsonValue {
         JsonValue::Null => {
         },
         JsonValue::Short(v) => {
-            result.push_str(&v.to_string());
+            r = v.to_string();
             // println!("short: {}, result: {}", v, result);
         },
         JsonValue::String(v) => {
-            result.push_str(&v);
+            r = v.to_string();
         },
         JsonValue::Number(v) => {
-            result.push_str(&v.to_string());
+            r = v.to_string();
         },
         JsonValue::Boolean(v) => {
-            result.push_str(&v.to_string());
+            r = v.to_string();
         },
         _ => {}
     }
+    r
 }
 
-fn join<'a, 'b:'a>(content: &'a str, platform: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
-    parse::join::parse_with_fn(content
-    , &mut |var: &str, t: &str, valueType: parse::join::ValueType| {
-        // on_field
-        if var == keyword_extra {
-            match valueType {
-                parse::join::ValueType::Object => {
-                    extraJson = &extraJson[t];
-                    append(extraJson, result);
-                },
-                parse::join::ValueType::Array => {
-                    match t.parse::<usize>() {
-                        Ok(index) => {
-                            extraJson = &extraJson[index];
-                        },
-                        Err(err) => {
-                            println!("[Error] index change error, err: {}", err);
-                            return;
-                        }
-                    }
-                    append(extraJson, result);
-                },
-                parse::join::ValueType::Var => {
-                    extraJson = &extraJsonClone;
-                },
-                _ => {}
-            }
-        } else {
-            match valueType {
-                parse::join::ValueType::Char => {
-                    match t.parse::<char>() {
-                        Ok(c) => {
-                            result.push(c);
-                        },
-                        Err(err) => {
-                            println!("[Error] index change error, err: {}", err);
-                            return;
-                        }
-                    }
-                },
-                parse::join::ValueType::Var => {
-                    if var == keyword_platform {
-                        result.push_str(platform);
+fn append(jsonValue: &JsonValue, result: &mut String) -> String {
+    let r = jsonToString(jsonValue);
+    result.push_str(&r);
+    r
+}
+
+fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+    let mut lastString = String::new();
+    let mut lastStrings = Vec::new();
+    let mut lastSymbol = String::new();
+    let mut lastIsJudgeSymbol = false;
+    parse::joinv2::parse(content
+    , &mut |t: &str, parseMode: &parse::joinv2::ParseMode, valueType: parse::joinv2::ValueType| -> Result<ValueCode, ValueError> {
+        // println!("t: {}, parseMode: {:?}, valueType: {:?}", t, parseMode, valueType);
+        match valueType {
+            parse::joinv2::ValueType::Start => {
+                extraJson = &extraJsonClone;
+                extraJson = &extraJson[t];
+            },
+            parse::joinv2::ValueType::Object => {
+                extraJson = &extraJson[t];
+            },
+            parse::joinv2::ValueType::End
+                | parse::joinv2::ValueType::EndAfterArray => {
+                match valueType {
+                    parse::joinv2::ValueType::End => {
+                        extraJson = &extraJson[t];
+                    },
+                    _ => {}
+                }
+                match parseMode {
+                    parse::joinv2::ParseMode::JudgeSub => {
+                        // lastString = jsonToString(extraJson);
+                        lastStrings.push(jsonToString(extraJson));
+                    },
+                    parse::joinv2::ParseMode::Normal => {
+                        append(extraJson, result);
+                    },
+                    _ => {}
+                }
+            },
+            parse::joinv2::ValueType::Array => {
+                match t.parse::<usize>() {
+                    Ok(index) => {
+                        extraJson = &extraJson[index];
+                    },
+                    Err(err) => {
+                        println!("[Error] index change error, err: {}", err);
+                        return Err(ValueError::Unknow);
                     }
                 }
-                _ => {}
+            },
+            parse::joinv2::ValueType::Char => {
+                match t.parse::<char>() {
+                    Ok(c) => {
+                        match parseMode {
+                            parse::joinv2::ParseMode::Normal => {
+                                result.push(c);
+                            },
+                            _ => {}
+                        }
+                    },
+                    Err(err) => {
+                        println!("[Error] index change error, err: {}", err);
+                        return Err(ValueError::Unknow);
+                    }
+                }
+            },
+            parse::joinv2::ValueType::Var => {
+                if t == keyword_platform {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = platform.to_string();
+                            lastStrings.push(platform.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(platform);
+                        },
+                        _ => {}
+                    }
+                } else if t == keyword_target {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = target.to_string();
+                            lastStrings.push(target.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(target);
+                        },
+                        _ => {}
+                    }
+                } else if t == keyword_version {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = version.to_string();
+                            lastStrings.push(version.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(version);
+                        },
+                        _ => {}
+                    }
+                }
+            },
+            parse::joinv2::ValueType::Condition(condType) => {
+                // println!("{:?}, {}", t, &lastString);
+                match condType {
+                    parse::joinv2::CondType::Symbol => {
+                        if t != "&&" && t != "||" {
+                            lastIsJudgeSymbol = true;
+                        }
+                        lastSymbol = t.to_string();
+                    },
+                    parse::joinv2::CondType::Else => {
+                        lastIsJudgeSymbol = false;
+                    },
+                    _ => {
+                        // json / str / var / judge
+                        let mut code = ValueCode::Normal;
+                        if lastIsJudgeSymbol {
+                            // println!("{:?}", &lastStrings);
+                            // compare
+                            if lastSymbol == "==" {
+                                if lastStrings.len() < 2 {
+                                    println!("equal error on both sides");
+                                    return Err(ValueError::Unknow);
+                                }
+                                if lastStrings[0] == lastStrings[1] {
+                                    code = ValueCode::DonotContinueJudge;
+                                }
+                                lastStrings.clear();
+                            } else if lastSymbol == "!=" {
+                                if lastStrings.len() < 2 {
+                                    println!("unequal error on both sides");
+                                    return Err(ValueError::Unknow);
+                                }
+                                if lastStrings[0] != lastStrings[1] {
+                                    code = ValueCode::DonotContinueJudge;
+                                }
+                                lastStrings.clear();
+                            }
+                        }
+                        lastIsJudgeSymbol = false;
+                        return Ok(code);
+                    }
+                }
+            },
+            parse::joinv2::ValueType::JudgeBody => {
+                result.push_str(t);
+            },
+            parse::joinv2::ValueType::Str => {
+                match parseMode {
+                    ParseMode::Normal => {
+                        result.push_str(t);
+                    },
+                    ParseMode::JudgeSub => {
+                        lastStrings.push(t.to_string());
+                    },
+                    _ => {}
+                }
             }
+            _ => {}
         }
+        Ok(ValueCode::Normal)
     })
+}
+
+#[derive(Default, Debug)]
+pub struct CResult {
+    pub debug: Option<String>,
+    pub release: Option<String>,
+    pub dr: Option<String>
 }
 
 pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<String> {
@@ -143,10 +236,16 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
             ""
         }
     };
-    let exePlatform  = match &exeParam.platform {
+    let platform  = match &exeParam.platform {
         Some(p) => p,
         None => {
             platform_default
+        }
+    };
+    let target = match &exeParam.target {
+        Some(t) => t,
+        None => {
+            target_default
         }
     };
     let mut extraJson = JsonValue::Null;
@@ -241,17 +340,19 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
     ** and update each field of the attributes with the result.
     */
     let mut platformValue = String::new();
-    if let Err(err) = join(&attributes.platform.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
+    let p = &attributes.platform.unwrap();
+    if let Err(err) = join(p, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
+    // println!("#####, {}, {}", p, &platformValue);
     let mut debugValue = String::new();
-    if let Err(err) = join(&attributes.debug.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
+    if let Err(err) = join(&attributes.debug.unwrap(), version, platform, target, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
     let mut releaseValue = String::new();
-    if let Err(err) = join(&attributes.release.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
+    if let Err(err) = join(&attributes.release.unwrap(), version, platform, target, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -300,176 +401,66 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
     Some(result)
 }
 
-#[derive(Default, Debug)]
-pub struct CResult {
-    pub debug: Option<String>,
-    pub release: Option<String>,
-    pub dr: Option<String>
-}
+#[cfg(test)]
+mod test {
+    use super::*;
 
-pub fn get1(exeParam: &parse::git_lib::CGitLib, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
-    /*
-    ** Determine the type of the extension field,
-    ** if it is a json type, it will be parsed
-    */
-    let extraType = match &exeParam.extraType {
-        Some(e) => e,
-        None => {
-            extra_type_string
-        }
-    };
-    let extra = match &exeParam.extra {
-        Some(e) => e,
-        None => {
-            ""
-        }
-    };
-    let exePlatform  = match &exeParam.platform {
-        Some(p) => p,
-        None => {
-            platform_default
-        }
-    };
-    let mut extraJson = JsonValue::Null;
-    if extraType == extra_type_string {
-    } else if extraType == extra_type_json {
-        extraJson = match json::parse(&extra) {
+    #[test]
+    #[ignore]
+    fn joinJudgeTest() {
+        let mut extraJson = match json::parse(&r#"
+            {
+                "extra": {
+                    "name": "win32",
+                    "objs": ["one", "two", "third"],
+                    "dr": "release"
+                }
+            }
+            "#) {
             Ok(e) => e,
             Err(err) => {
-                return None;
+                return;
             }
         };
-    }
-    let mut extraJsonClone = extraJson.clone();
-    /*
-    ** Firstly find the splicing rules in each version.
-    ** If it does not exist, look for the overall splicing rules.
-    ** If none of them exist, set the default value.
-    */
-    let mut attributes = match &libVesion.attributes {
-        Some(a) => {
-            let platform = match &a.platform {
-                Some(p) => p,
-                None => {
-                    platform_default
-                }
-            };
-            let debug = match &a.debug {
-                Some(d) => d,
-                None => {
-                    debug_default
-                }
-            };
-            let release = match &a.release {
-                Some(r) => r,
-                None => {
-                    release_default
-                }
-            };
-            let rule = match &a.rule {
-                Some(r) => r,
-                None => {
-                    rule_default
-                }
-            };
-            config::libconfig::CAttributes{
-                platform: Some(platform.to_string()),
-                debug: Some(debug.to_string()),
-                release: Some(release.to_string()),
-                rule: Some(rule.to_string()),
-                libpathRule: None,
-                includeRule: None
-            }
-        },
-        None => {
-            let platform = match &libPackage.platform {
-                Some(p) => p,
-                None => {
-                    platform_default
-                }
-            };
-            let debug = match &libPackage.debug {
-                Some(d) => d,
-                None => {
-                    debug_default
-                }
-            };
-            let release = match &libPackage.release {
-                Some(r) => r,
-                None => {
-                    release_default
-                }
-            };
-            let rule = match &libPackage.rule {
-                Some(r) => r,
-                None => {
-                    rule_default
-                }
-            };
-            config::libconfig::CAttributes{
-                platform: Some(platform.to_string()),
-                debug: Some(debug.to_string()),
-                release: Some(release.to_string()),
-                rule: Some(rule.to_string()),
-                libpathRule: None,
-                includeRule: None
-            }
+        let mut extraJsonClone = extraJson.clone();
+        let mut result = String::new();
+        join(r#"
+        `judge:"
+        if json:'extra.name' == str:'win64' {
+            64
+        } elseif json:'extra.dr' == str:'debug' {
+            _d
+        } else {
+            _
         }
-    };
-    /*
-    ** Parse each field in the attributes,
-    ** and splice according to the parameters provided by the application,
-    ** and update each field of the attributes with the result.
-    */
-    let mut platformValue = String::new();
-    if let Err(err) = join(&attributes.platform.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    let mut debugValue = String::new();
-    if let Err(err) = join(&attributes.debug.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    let mut releaseValue = String::new();
-    if let Err(err) = join(&attributes.release.unwrap(), exePlatform, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    /*
-    ** Parse the rules and then combine the rules
-    */
-    let mut result = CResult::default();
-    let mut debugName = String::new();
-    let mut releaseName = String::new();
-    parse::rule::parse(&attributes.rule.unwrap(), &mut |t: &str, valueType: parse::rule::ValueType| {
-        match valueType {
-            parse::rule::ValueType::Var => {
-                if t == keyword_name {
-                    debugName.push_str(&libPackage.name);
-                    releaseName.push_str(&libPackage.name);
-                } else if t == keyword_platform {
-                    debugName.push_str(&platformValue);
-                    releaseName.push_str(&platformValue);
-                } else if t == keyword_version {
-                    debugName.push_str(version);
-                    releaseName.push_str(version);
-                } else if t == keyword_d_r {
-                    debugName.push_str(&debugValue);
-                    releaseName.push_str(&releaseValue);
-                }
-            },
-            parse::rule::ValueType::Char => {
-                debugName.push_str(t);
-                releaseName.push_str(t);
-            }
-        }
-    });
-    if debugName == releaseName {
-        result.dr = Some(releaseName);
-    } else {
-        result.debug = Some(debugName);
-        result.release = Some(releaseName);
+        "`
+            "#, "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        println!("{:?}", result);
     }
-    Some(result)
+
+    #[test]
+    #[ignore]
+    fn joinJsonTest() {
+        let mut extraJson = match json::parse(&r#"
+            {
+                "extra": {
+                    "name": "win32",
+                    "objs": ["one", "two", "third"],
+                    "dr": "release"
+                },
+                "objs": ["1", "2", "3"]
+            }
+            "#) {
+            Ok(e) => e,
+            Err(err) => {
+                return;
+            }
+        };
+        let mut extraJsonClone = extraJson.clone();
+        let mut result = String::new();
+        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'objs[1]'`"
+            , "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        println!("{:?}", result);
+    }
 }
+

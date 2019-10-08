@@ -51,6 +51,7 @@ fn append(jsonValue: &JsonValue, result: &mut String) -> String {
 }
 
 fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+    let mut flag: u8 = 0;
     let mut lastString = String::new();
     let mut lastStrings = Vec::new();
     let mut lastSymbol = String::new();
@@ -62,6 +63,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
             parse::joinv2::ValueType::Start => {
                 extraJson = &extraJsonClone;
                 extraJson = &extraJson[t];
+                // println!("{:?}", extraJson);
             },
             parse::joinv2::ValueType::Object => {
                 extraJson = &extraJson[t];
@@ -175,7 +177,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                         // json / str / var / judge
                         let mut code = ValueCode::Normal;
                         if lastIsJudgeSymbol {
-                            println!("{:?}", &lastStrings);
+                            // println!("{:?}", &lastStrings);
                             // compare
                             if lastSymbol == "==" {
                                 if lastStrings.len() < 2 {
@@ -540,7 +542,7 @@ mod test {
 
 	#[test]
     #[ignore]
-	fn joinTest() {
+	fn joinJudgeTest() {
         let mut extraJson = match json::parse(&r#"
 	        {
 	            "extra": {
@@ -570,4 +572,27 @@ mod test {
 			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
         println!("{:?}", result);
 	}
+
+    #[test]
+    #[ignore]
+    fn joinJsonTest() {
+        let mut extraJson = match json::parse(&r#"
+            {
+                "extra": {
+                    "name": "win32",
+                    "objs": ["one", "two", "third"],
+                    "dr": "release"
+                }
+            }
+            "#) {
+            Ok(e) => e,
+            Err(err) => {
+                return;
+            }
+        };
+        let mut extraJsonClone = extraJson.clone();
+        let mut result = String::new();
+        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'extra.objs[1]'`", ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        println!("{:?}", result);
+    }
 }

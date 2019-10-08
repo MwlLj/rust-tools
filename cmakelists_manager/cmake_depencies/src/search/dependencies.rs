@@ -259,6 +259,7 @@ impl CDependSearcher {
     }
 }
 
+/*
 impl CDependSearcher {
     pub fn search1<'b>(&self, runArgs: &cratestructs::param::CRunArgs, root: &'b str/*, defaultLibRel: &str*/, param: &parse::git_lib::CGitLib, results: &mut Vec<CResults>) -> Result<(), &'b str> {
         let librarys = match &param.library {
@@ -454,6 +455,7 @@ impl CDependSearcher {
         Ok(())
     }
 }
+*/
 
 impl CDependSearcher {
     pub fn new() -> CDependSearcher {
@@ -472,6 +474,7 @@ mod test {
             version: Some("0.1.10".to_string())
         };
         let searcher = CDependSearcher::new();
+        /*
         searcher.search1(&cratestructs::param::CRunArgs{
         }, ".", &parse::git_lib::CGitLib{
             library: Some(&librarys),
@@ -481,5 +484,6 @@ mod test {
             extra: Some("{\"name\": \"jake\", \"objs\": [\"1\", \"2\", \"3\"]}".to_string()),
             extraType: Some("json".to_string())
         }, &mut Vec::new());
+        */
     }
 }

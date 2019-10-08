@@ -63,7 +63,10 @@ impl CReplace {
         for library in librarys.iter() {
             let mut results: Vec<Vec<CSearchResult>> = Vec::new();
             let searcher = CDependSearcher::new();
-            searcher.search(&root, library, params, &mut results);
+            if let Err(err) = searcher.search(&root, library, params, &mut results) {
+                println!("[Error] search error, err: {}", err);
+                return;
+            };
             for result in results.iter() {
                 for item in result.iter() {
                     let mut s = String::new();
@@ -191,6 +194,7 @@ impl CReplace {
 mod test {
     use super::*;
     #[test]
+    // #[ignore]
     fn replaceTest() {
         let replacer = CReplace::new();
         replacer.replace("./doc/exe_cmake/CMakelists.config", ".");

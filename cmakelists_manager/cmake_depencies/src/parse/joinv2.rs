@@ -195,7 +195,7 @@ impl CJoinParser {
                                             innerWord.clear();
                                             innerLastMode = InnerMode::Object;
                                         } else if c == '[' {
-                                            f.on_value(&innerWord, parseMode, ValueType::Start);
+                                            f.on_value(&innerWord, parseMode, ValueType::Object);
                                             innerWord.clear();
                                             innerMode = InnerMode::Array;
                                         } else {
@@ -277,7 +277,7 @@ impl CJoinParser {
                                                         return Err("on value error");
                                                     }
                                                 };
-                                                println!("innerWord: {}, {:?}", &innerWord, valueCode);
+                                                // println!("innerWord: {}, {:?}", &innerWord, valueCode);
                                             } else {
                                                 f.on_value(&innerWord, parseMode, ValueType::Condition(CondType::Symbol));
                                             }
@@ -476,7 +476,8 @@ mod test {
         "#;
         */
         // let s = "`str:\"hello\"`";
-        let s = "`var:'config'``var:'version'`";
+        // let s = "`var:'config'``var:'version'`";
+        let s = "abcd.`json:'extra.name'`.`json:'extra.objs[0]'`";
         println!("{:?}", s);
         let parser = CJoinParser::new();
         parser.parse(s, &ParseMode::Normal, &mut CJoin{

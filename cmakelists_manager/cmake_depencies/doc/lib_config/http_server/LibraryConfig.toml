@@ -5,7 +5,7 @@ edition = ''
 # 根据 调用者在cmake中指定的字段拼接成自身的 platform
 # $platform:  调用者在cmake中指定的 platform 变量的值
 #           例: 调用方指定 {platform = ${FILE_PREFIX} }, 那么这里的 $platform 就是 ${FILE_PREFIX}
-platform = "$platform"
+platform = "`var:'platform'`"
 # 本库需要使用的debug后缀名
 debug = "_d"
 # 本库需要使用的release后缀名
@@ -28,7 +28,7 @@ rule = "$name$version$platform$d_r"
 # 以下四个参数和 [package] 中的使用方式一致
 # 如果每个版本有自己的attributes, 优先取版本下的attributes, 如果版本下不存在attributes, 则取 package 中的attributes
 # platform = "$platform"
-platform = "abcd.'$extra.name'.'$extra.objs[0]'"
+platform = "abcd.`json:'name'`.`json:'objs[0]'`"
 debug = "_d"
 release = ""
 rule = "$name-$version-$platform$d_r"

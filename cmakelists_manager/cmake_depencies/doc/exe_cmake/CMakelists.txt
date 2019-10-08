@@ -3,31 +3,34 @@ set(git_librarys
 )
 
 INCLUDE_DIRECTORIES(
-	${HEADER_DIR}
-	${THIRD_HEADER_DIR}
-	${HEADER_DIR}/cbb11commonlogic
-	${HEADER_DIR}/cbb11commonlogic/sql
-	${HEADER_DIR}/cbb12commu
-	${HEADER_DIR}/framework
-	${HEADER_DIR}/cbb38svrapi/
-	${HEADER_DIR}/cbb38svrapi/dahapi
-	${HEADER_DIR}/framework/jsonconverter
-	${HEADER_DIR}/cbb95logicdata/iotas_baseconfig
-	${THIRD_HEADER_DIR}/hk
-	${THIRD_HEADER_DIR}/hk/net
-	include/
-	${PROJECT_SOURCE_DIR}/03implement/svr16iotas_acd
 	"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\include\\0.1.10"
 
 )
 
-LINK_DIRECTORIES (
-	${LINK_LIBRARIES_DIR}
-	"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\win64"
+IF (${OS} STREQUAL "WINDOWS")
+	If (${FILE_PREFIX} STREQUAL "64")
+		LINK_DIRECTORIES (
+			"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\win64"
 "D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\win64"
 "D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\win64"
 
-)
+		)
+	ELSE()
+		LINK_DIRECTORIES (
+			"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\win32"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\win32"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\win32"
+
+		)
+	ENDIF()
+ELSEIF (${OS} STREQUAL "LINUX")
+	LINK_DIRECTORIES (
+		"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\gnu64"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\gnu64"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\gnu64"
+
+	)
+ENDIF()
 
 SET(TARGET_NAME iotas_acd_hk${FILE_PREFIX})
 
@@ -64,9 +67,9 @@ SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES DEBUG_POSTFIX "_d")
 
 IF (${OS} STREQUAL "WINDOWS")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-			debug test-0.1.10-abcd.m.1_d release test-0.1.10-abcd.m.1
+			debug test.0.1.10.win64_d release test.0.1.10.win64
 debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
-debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
+debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
 
 		)
 		
@@ -83,9 +86,9 @@ debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
 		INSTALL (FILES "${INSTALL_BIN_DIR}/third_dll/mosquitto_broker/broker.dll" DESTINATION ${TARGET_INSTALL_DIR})
 ELSEIF (${OS} STREQUAL "LINUX")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-						debug test-0.1.10-abcd.m.1_d release test-0.1.10-abcd.m.1
+						debug test.0.1.10._d release test.0.1.10.
 debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
-debug openssl1.0.0${FILE_PREFIX}_d release openssl1.0.0${FILE_PREFIX}
+debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
 
 		)
 
