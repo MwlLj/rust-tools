@@ -1,5 +1,5 @@
 [package]
-name = "depencies_replace"
+name = "cmake_depencies"
 version = "0.1.0"
 authors = ["MwlLj <731025894@qq.com>"]
 edition = "2018"
@@ -31,3 +31,6 @@ version = "0.2"
 
 [dependencies.path_abs]
 version = "0.5"
+
+[dependencies.rust_parse]
+git = "https://github.com/MwlLj/rust_parse"

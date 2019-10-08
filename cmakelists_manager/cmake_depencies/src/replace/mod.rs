@@ -194,7 +194,7 @@ impl CReplace {
 mod test {
     use super::*;
     #[test]
-    // #[ignore]
+    #[ignore]
     fn replaceTest() {
         let replacer = CReplace::new();
         replacer.replace("./doc/exe_cmake/CMakelists.config", ".");
