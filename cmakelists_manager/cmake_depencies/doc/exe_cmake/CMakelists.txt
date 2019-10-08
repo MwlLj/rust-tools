@@ -67,7 +67,7 @@ SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES DEBUG_POSTFIX "_d")
 
 IF (${OS} STREQUAL "WINDOWS")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-			debug test.0.1.10.win64_d release test.0.1.10.win64
+			debug test.0.1.10.64_d release test.0.1.10.64
 debug http_server-0.1.0-abcd.m.1_d release http_server-0.1.0-abcd.m.1
 debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
 

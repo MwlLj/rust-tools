@@ -34,7 +34,6 @@ libpathRule = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'
 [versions."0.1.10".attributes]
 # 以下四个参数和 [package] 中的使用方式一致
 # 如果每个版本有自己的attributes, 优先取版本下的attributes, 如果版本下不存在attributes, 则取 package 中的attributes
-# platform = "$platform"
 platform = """
         `judge:"
         if var:'platform' == str:'win64' {
@@ -43,13 +42,28 @@ platform = """
             win32 
         } elseif var:'platform' == str:'gnu64' {
             gnu64
+        } else {
         }
         "`"""
 debug = "_d"
 release = ""
-rule = "$name.$version.$platform$d_r"
+rule = "$name.$version.$name_platform$d_r"
 includeRule = "`var:'config'`/include/`var:'version'`"
 libpathRule = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`"
+
+# 使用自定义字段
+[versions."0.1.10".attributes.map]
+name_platform = """
+        `judge:"
+        if var:'platform' == str:'win64' {
+            64
+        } elseif var:'platform' == str:'win32' {
+            32
+        } elseif var:'platform' == str:'gnu64' {
+            64
+        } else {
+        }
+        "`"""
 
 [versions."0.1.10".dependencies]
 # librel: lib 相对 库名.library.config.toml / 库名/LibraryConfig.toml 的路径

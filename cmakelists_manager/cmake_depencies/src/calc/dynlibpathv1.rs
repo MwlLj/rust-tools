@@ -1,28 +1,25 @@
 use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
 use crate::config;
+use crate::structs;
 
 use json::{JsonValue};
+use path_abs::PathAbs;
 
-use std::collections::HashMap;
+use std::path::Path;
 
-const platform_default: &str = "win64";
-const debug_default: &str = "_d";
-const release_default: &str = "";
-const rule_default: &str = "$name.$version.$platform$d_r";
+const libpath_rule_default: &str = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`";
+const include_rule_default: &str = "`var:'config'`/include/`var:'version'";
+const platform_default: &str = "";
 const target_default: &str = "";
 
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
 
 const keyword_extra: &str = "extra";
-const keyword_name: &str = "name";
 const keyword_version: &str = "version";
-const keyword_platform: &str = "platform";
 const keyword_target: &str = "target";
-const keyword_d_r: &str = "d_r";
-
-const cmake_keyword_debug: &str = "debug";
-const cmake_keyword_release: &str = "release";
+const keyword_platform: &str = "platform";
+const keyword_config: &str = "config";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -53,7 +50,8 @@ fn append(jsonValue: &JsonValue, result: &mut String) -> String {
     r
 }
 
-fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+    let mut flag: u8 = 0;
     let mut lastString = String::new();
     let mut lastStrings = Vec::new();
     let mut lastSymbol = String::new();
@@ -65,6 +63,7 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
             parse::joinv2::ValueType::Start => {
                 extraJson = &extraJsonClone;
                 extraJson = &extraJson[t];
+                // println!("{:?}", extraJson);
             },
             parse::joinv2::ValueType::Object => {
                 extraJson = &extraJson[t];
@@ -138,6 +137,17 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                         },
                         _ => {}
                     }
+                } else if t == keyword_config {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = configPath.to_string();
+                            lastStrings.push(configPath.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(configPath);
+                        },
+                        _ => {}
+                    }
                 } else if t == keyword_version {
                     match parseMode {
                         parse::joinv2::ParseMode::JudgeSub => {
@@ -155,13 +165,13 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                 // println!("{:?}, {}", t, &lastString);
                 match condType {
                     parse::joinv2::CondType::Symbol => {
-                        if t != "&&" && t != "||" {
+                    	if t != "&&" && t != "||" {
                             lastIsJudgeSymbol = true;
-                        }
+                    	}
                         lastSymbol = t.to_string();
                     },
                     parse::joinv2::CondType::Else => {
-                        lastIsJudgeSymbol = false;
+                    	lastIsJudgeSymbol = false;
                     },
                     _ => {
                         // json / str / var / judge
@@ -174,22 +184,22 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                                     println!("equal error on both sides");
                                     return Err(ValueError::Unknow);
                                 }
-                                if lastStrings[0] == lastStrings[1] {
+                            	if lastStrings[0] == lastStrings[1] {
                                     code = ValueCode::DonotContinueJudge;
-                                }
+                            	}
                                 lastStrings.clear();
                             } else if lastSymbol == "!=" {
                                 if lastStrings.len() < 2 {
                                     println!("unequal error on both sides");
                                     return Err(ValueError::Unknow);
                                 }
-                                if lastStrings[0] != lastStrings[1] {
+                            	if lastStrings[0] != lastStrings[1] {
                                     code = ValueCode::DonotContinueJudge;
-                                }
+                            	}
                                 lastStrings.clear();
                             }
                         }
-                        lastIsJudgeSymbol = false;
+                    	lastIsJudgeSymbol = false;
                         return Ok(code);
                     }
                 }
@@ -216,12 +226,11 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
 
 #[derive(Default, Debug)]
 pub struct CResult {
-    pub debug: Option<String>,
-    pub release: Option<String>,
-    pub dr: Option<String>
+    pub libpath: Option<String>,
+    pub include: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<String> {
+pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -268,73 +277,61 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
     */
     let mut attributes = match &libVesion.attributes {
         Some(a) => {
-            let platform = match &a.platform {
-                Some(p) => p,
-                None => {
-                    platform_default
-                }
-            };
-            let debug = match &a.debug {
+            let libpathRule = match &a.libpathRule {
                 Some(d) => d,
                 None => {
-                    debug_default
+                    libpath_rule_default
                 }
             };
-            let release = match &a.release {
+            let includeRule = match &a.includeRule {
                 Some(r) => r,
                 None => {
-                    release_default
+                    include_rule_default
                 }
             };
-            let rule = match &a.rule {
-                Some(r) => r,
+            let map = match &a.map {
+                Some(m) => m.clone(),
                 None => {
-                    rule_default
+                    HashMap::new()
                 }
             };
             config::libconfig::CAttributes{
-                platform: Some(platform.to_string()),
-                debug: Some(debug.to_string()),
-                release: Some(release.to_string()),
-                rule: Some(rule.to_string()),
-                libpathRule: None,
-                includeRule: None,
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string()),
                 map: a.map.clone()
             }
         },
         None => {
-            let platform = match &libPackage.platform {
-                Some(p) => p,
-                None => {
-                    platform_default
-                }
-            };
-            let debug = match &libPackage.debug {
+            let libpathRule = match &libPackage.libpathRule {
                 Some(d) => d,
                 None => {
-                    debug_default
+                    libpath_rule_default
                 }
             };
-            let release = match &libPackage.release {
+            let includeRule = match &libPackage.includeRule {
                 Some(r) => r,
                 None => {
-                    release_default
+                    include_rule_default
                 }
             };
-            let rule = match &libPackage.rule {
-                Some(r) => r,
+            let map = match &libPackage.map {
+                Some(m) => m.clone(),
                 None => {
-                    rule_default
+                    HashMap::new()
                 }
             };
             config::libconfig::CAttributes{
-                platform: Some(platform.to_string()),
-                debug: Some(debug.to_string()),
-                release: Some(release.to_string()),
-                rule: Some(rule.to_string()),
-                libpathRule: None,
-                includeRule: None,
-                map: libPackage.map.clone()
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string()),
+                map: Some(map)
             }
         }
     };
@@ -343,139 +340,240 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
     ** and splice according to the parameters provided by the application,
     ** and update each field of the attributes with the result.
     */
-    let mut platformValue = String::new();
-    let p = match &attributes.platform {
+    let mut libpathValue = String::new();
+    // println!("attr: {:?}", &attributes);
+    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    // println!("###### {:?}", &libpathValue);
+    let mut includeValue = String::new();
+    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    // println!("###### {:?}", &includeValue);
+    let mut r = CResult::default();
+    /*
+    ** Get absolute path
+    */
+    match Path::new(&libpathValue).canonicalize() {
+        Ok(p) => {
+            match p.to_str() {
+                Some(s) => {
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.libpath = Some(t);
+                    } else {
+                        r.libpath = Some(s.to_string());
+                    }
+                },
+                None => {
+                    println!("[Error] libpath abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
+        }
+    };
+    match Path::new(&includeValue).canonicalize() {
+        Ok(p) => {
+            match p.as_os_str().to_str() {
+                Some(s) => {
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.include = Some(t);
+                    } else {
+                        r.include = Some(s.to_string());
+                    }
+                },
+                None => {
+                    println!("[Erorr] include abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] include rule kjoin path error");
+        }
+    }
+    Some(r)
+}
+
+pub fn get1(exeParam: &parse::git_lib::CGitLib, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+    /*
+    ** Determine the type of the extension field,
+    ** if it is a json type, it will be parsed
+    */
+    let extraType = match &exeParam.extraType {
+        Some(e) => e,
+        None => {
+            extra_type_string
+        }
+    };
+    let extra = match &exeParam.extra {
+        Some(e) => e,
+        None => {
+            ""
+        }
+    };
+    let platform  = match &exeParam.platform {
         Some(p) => p,
         None => {
-            panic!("platform is not exist");
+            platform_default
         }
     };
-    if let Err(err) = join(p, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    // println!("#####, {}, {}", p, &platformValue);
-    let mut debugValue = String::new();
-    let d = match &attributes.debug {
-        Some(d) => d,
+    let target = match &exeParam.target {
+        Some(t) => t,
         None => {
-            panic!("debug is not exist");
+            target_default
         }
     };
-    if let Err(err) = join(d, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    let mut releaseValue = String::new();
-    let r = match &attributes.release {
-        Some(r) => r,
-        None => {
-            panic!("release id not exist");
-        }
-    };
-    if let Err(err) = join(r, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
-    };
-    let mut maps = HashMap::new();
-    match &attributes.map {
-        Some(m) => {
-            for (k, v) in m {
-                let mut value = String::new();
-                if let Err(err) = join(v, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut value) {
-                    println!("[Error] join parse error, err: {}", err);
-                    continue;
-                };
-                maps.insert(k.to_string(), value);
+    let mut extraJson = JsonValue::Null;
+    if extraType == extra_type_string {
+    } else if extraType == extra_type_json {
+        extraJson = match json::parse(&extra) {
+            Ok(e) => e,
+            Err(err) => {
+                return None;
+            }
+        };
+    }
+    let mut extraJsonClone = extraJson.clone();
+    /*
+    ** Firstly find the splicing rules in each version.
+    ** If it does not exist, look for the overall splicing rules.
+    ** If none of them exist, set the default value.
+    */
+    let mut attributes = match &libVesion.attributes {
+        Some(a) => {
+            let libpathRule = match &a.libpathRule {
+                Some(d) => d,
+                None => {
+                    libpath_rule_default
+                }
+            };
+            let includeRule = match &a.includeRule {
+                Some(r) => r,
+                None => {
+                    include_rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string())
             }
         },
         None => {
-        }
-    }
-    /*
-    ** Parse the rules and then combine the rules
-    */
-    let mut debugName = String::new();
-    let mut releaseName = String::new();
-    let ru = match &attributes.rule {
-        Some(ru) => ru,
-        None => {
-            panic!("rule is not exist");
-        }
-    };
-    parse::rule::parse(ru, &mut |t: &str, valueType: parse::rule::ValueType| {
-        match valueType {
-            parse::rule::ValueType::Var => {
-                if t == keyword_name {
-                    debugName.push_str(&libPackage.name);
-                    releaseName.push_str(&libPackage.name);
-                } else if t == keyword_platform {
-                    debugName.push_str(&platformValue);
-                    releaseName.push_str(&platformValue);
-                } else if t == keyword_version {
-                    debugName.push_str(version);
-                    releaseName.push_str(version);
-                } else if t == keyword_d_r {
-                    debugName.push_str(&debugValue);
-                    releaseName.push_str(&releaseValue);
-                } else {
-                    match maps.get(t) {
-                        Some(v) => {
-                            debugName.push_str(v);
-                            releaseName.push_str(v);
-                        },
-                        None => {
-                        }
-                    }
+            let libpathRule = match &libPackage.libpathRule {
+                Some(d) => d,
+                None => {
+                    libpath_rule_default
                 }
-            },
-            parse::rule::ValueType::Char => {
-                debugName.push_str(t);
-                releaseName.push_str(t);
+            };
+            let includeRule = match &libPackage.includeRule {
+                Some(r) => r,
+                None => {
+                    include_rule_default
+                }
+            };
+            config::libconfig::CAttributes{
+                platform: None,
+                debug: None,
+                release: None,
+                rule: None,
+                libpathRule: Some(libpathRule.to_string()),
+                includeRule: Some(includeRule.to_string())
             }
         }
-    });
-    let mut result = String::new();
-    if debugName == releaseName {
-        result = releaseName;
-    } else {
-        // debug
-        result.push_str(cmake_keyword_debug);
-        result.push_str(" ");
-        result.push_str(&debugName);
-        result.push_str(" ");
-        // release
-        result.push_str(cmake_keyword_release);
-        result.push_str(" ");
-        result.push_str(&releaseName);
+    };
+    /*
+    ** Parse each field in the attributes,
+    ** and splice according to the parameters provided by the application,
+    ** and update each field of the attributes with the result.
+    */
+    let mut libpathValue = String::new();
+    // println!("attr: {:?}", &attributes);
+    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    println!("{:?}", &libpathValue);
+    let mut includeValue = String::new();
+    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut r = CResult::default();
+    /*
+    ** Get absolute path
+    */
+    match Path::new(&libpathValue).canonicalize() {
+        Ok(p) => {
+            match p.to_str() {
+                Some(s) => {
+                    if cfg!(target_os="windows"){
+                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                        r.libpath = Some(t);
+                    } else {
+                        r.libpath = Some(s.to_string());
+                    }
+                },
+                None => {
+                    println!("[Error] libpath abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
+        }
+    };
+    match Path::new(&includeValue).canonicalize() {
+        Ok(p) => {
+            match p.as_os_str().to_str() {
+                Some(s) => {
+                    r.include = Some(s.to_string());
+                },
+                None => {
+                    println!("[Erorr] include abs to_str error");
+                }
+            }
+        },
+        Err(err) => {
+            println!("[Error] include rule kjoin path error");
+        }
     }
-    Some(result)
+    Some(r)
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
+	use super::*;
 
-    #[test]
+	#[test]
     #[ignore]
-    fn joinJudgeTest() {
+	fn joinJudgeTest() {
         let mut extraJson = match json::parse(&r#"
-            {
-                "extra": {
-                    "name": "win32",
-                    "objs": ["one", "two", "third"],
+	        {
+	            "extra": {
+	                "name": "win32",
+	                "objs": ["one", "two", "third"],
                     "dr": "release"
-                }
-            }
-            "#) {
+	            }
+	        }
+        	"#) {
             Ok(e) => e,
             Err(err) => {
                 return;
             }
         };
-        let mut extraJsonClone = extraJson.clone();
-        let mut result = String::new();
-        join(r#"
+	    let mut extraJsonClone = extraJson.clone();
+	    let mut result = String::new();
+		join(r#"
         `judge:"
         if json:'extra.name' == str:'win64' {
             64
@@ -485,9 +583,9 @@ mod test {
             _
         }
         "`
-            "#, "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
         println!("{:?}", result);
-    }
+	}
 
     #[test]
     #[ignore]
@@ -498,8 +596,7 @@ mod test {
                     "name": "win32",
                     "objs": ["one", "two", "third"],
                     "dr": "release"
-                },
-                "objs": ["1", "2", "3"]
+                }
             }
             "#) {
             Ok(e) => e,
@@ -509,9 +606,7 @@ mod test {
         };
         let mut extraJsonClone = extraJson.clone();
         let mut result = String::new();
-        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'objs[1]'`"
-            , "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'extra.objs[1]'`", ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
         println!("{:?}", result);
     }
 }
-

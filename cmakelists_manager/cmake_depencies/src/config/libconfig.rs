@@ -12,7 +12,8 @@ pub struct CPackage {
     pub release: Option<String>,
     pub rule: Option<String>,
     pub libpathRule: Option<String>,
-    pub includeRule: Option<String>
+    pub includeRule: Option<String>,
+    pub map: Option<HashMap<String, String>>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -22,7 +23,8 @@ pub struct CAttributes {
     pub release: Option<String>,
     pub rule: Option<String>,
     pub libpathRule: Option<String>,
-    pub includeRule: Option<String>
+    pub includeRule: Option<String>,
+    pub map: Option<HashMap<String, String>>
 }
 
 /*
