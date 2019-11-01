@@ -221,7 +221,7 @@ pub struct CResult {
     pub dr: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<String> {
+pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -395,61 +395,65 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libPackage: &config
     /*
     ** Parse the rules and then combine the rules
     */
-    let mut debugName = String::new();
-    let mut releaseName = String::new();
     let ru = match &attributes.rule {
         Some(ru) => ru,
         None => {
             panic!("rule is not exist");
         }
     };
-    parse::rule::parse(ru, &mut |t: &str, valueType: parse::rule::ValueType| {
-        match valueType {
-            parse::rule::ValueType::Var => {
-                if t == keyword_name {
-                    debugName.push_str(&libPackage.name);
-                    releaseName.push_str(&libPackage.name);
-                } else if t == keyword_platform {
-                    debugName.push_str(&platformValue);
-                    releaseName.push_str(&platformValue);
-                } else if t == keyword_version {
-                    debugName.push_str(version);
-                    releaseName.push_str(version);
-                } else if t == keyword_d_r {
-                    debugName.push_str(&debugValue);
-                    releaseName.push_str(&releaseValue);
-                } else {
-                    match maps.get(t) {
-                        Some(v) => {
-                            debugName.push_str(v);
-                            releaseName.push_str(v);
-                        },
-                        None => {
+    let mut results = Vec::new();
+    for lib in libs {
+        let mut debugName = String::new();
+        let mut releaseName = String::new();
+        let mut result = String::new();
+        parse::rule::parse(ru, &mut |t: &str, valueType: parse::rule::ValueType| {
+            match valueType {
+                parse::rule::ValueType::Var => {
+                    if t == keyword_name {
+                        debugName.push_str(&lib);
+                        releaseName.push_str(&lib);
+                    } else if t == keyword_platform {
+                        debugName.push_str(&platformValue);
+                        releaseName.push_str(&platformValue);
+                    } else if t == keyword_version {
+                        debugName.push_str(version);
+                        releaseName.push_str(version);
+                    } else if t == keyword_d_r {
+                        debugName.push_str(&debugValue);
+                        releaseName.push_str(&releaseValue);
+                    } else {
+                        match maps.get(t) {
+                            Some(v) => {
+                                debugName.push_str(v);
+                                releaseName.push_str(v);
+                            },
+                            None => {
+                            }
                         }
                     }
+                },
+                parse::rule::ValueType::Char => {
+                    debugName.push_str(t);
+                    releaseName.push_str(t);
                 }
-            },
-            parse::rule::ValueType::Char => {
-                debugName.push_str(t);
-                releaseName.push_str(t);
             }
+        });
+        if debugName == releaseName {
+            result = releaseName;
+        } else {
+            // debug
+            result.push_str(cmake_keyword_debug);
+            result.push_str(" ");
+            result.push_str(&debugName);
+            result.push_str(" ");
+            // release
+            result.push_str(cmake_keyword_release);
+            result.push_str(" ");
+            result.push_str(&releaseName);
         }
-    });
-    let mut result = String::new();
-    if debugName == releaseName {
-        result = releaseName;
-    } else {
-        // debug
-        result.push_str(cmake_keyword_debug);
-        result.push_str(" ");
-        result.push_str(&debugName);
-        result.push_str(" ");
-        // release
-        result.push_str(cmake_keyword_release);
-        result.push_str(" ");
-        result.push_str(&releaseName);
+        results.push(result);
     }
-    Some(result)
+    Some(results)
 }
 
 #[cfg(test)]

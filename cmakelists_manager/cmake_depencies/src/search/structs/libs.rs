@@ -1,6 +1,7 @@
 #[derive(Eq, Debug)]
 pub struct CLibInfo<'a> {
     pub name: &'a str,
+    pub subs: &'a Option<String>,
     pub version: &'a str,
     pub no: &'a u32,
     pub root: String

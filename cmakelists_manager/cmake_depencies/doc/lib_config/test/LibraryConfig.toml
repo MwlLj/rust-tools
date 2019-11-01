@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "test"
 authors = ''
 edition = ''
@@ -68,7 +68,7 @@ name_platform = """
 [versions."0.1.10".dependencies]
 # librel: lib 相对 库名.library.config.toml / 库名/LibraryConfig.toml 的路径
 # libabs: 绝对路径, 默认不设置
-http_server = {version = "0.1.0", root = "..", no = 0}
+http_server = {version = "0.1.0", root = "..", no = 0, subs = "abc,def"}
 
 # [version."0.1.10".dependencies.http_server]
 # version = '0.1.0'

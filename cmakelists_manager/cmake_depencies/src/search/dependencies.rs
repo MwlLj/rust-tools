@@ -25,7 +25,7 @@ pub struct CResults {
 #[derive(Debug, Default, Clone)]
 pub struct CSearchResult {
     pub startIndex: usize,
-    pub name: String,
+    pub name: Vec<String>,
     pub paramType: git_lib::ParamType
 }
 
@@ -142,7 +142,7 @@ impl CDependSearcher {
             match param.paramType {
                 ParamType::LibName => {
                     // dynamic calc this version lib - full name
-                    let fullName = match calc::dynlibname::get(param, searchVersion, &libConfig.package, dependVersion) {
+                    let fullNames = match calc::dynlibname::get(param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
                         Some(n) => n,
                         None => {
                             println!("calc full name error");
@@ -151,7 +151,7 @@ impl CDependSearcher {
                     };
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: fullName,
+                        name: fullNames,
                         paramType: param.paramType.clone()
                     });
                 },
@@ -176,7 +176,7 @@ impl CDependSearcher {
                     };
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: libpath.to_string(),
+                        name: vec![libpath.to_string()],
                         paramType: param.paramType.clone()
                     });
                 },
@@ -201,7 +201,7 @@ impl CDependSearcher {
                     };
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: include.to_string(),
+                        name: vec![include.to_string()],
                         paramType: param.paramType.clone()
                     });
                 },
@@ -233,6 +233,7 @@ impl CDependSearcher {
                     };
                     ds.push(structs::libs::CLibInfo{
                         name: &key,
+                        subs: &value.subs,
                         version: &value.version,
                         no: &value.no,
                         root: r.to_string()
@@ -244,9 +245,22 @@ impl CDependSearcher {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
+                    let mut libs = Vec::new();
+                    match &value.subs {
+                        Some(subs) => {
+                            let vs: Vec<&str> = subs.split(git_librarys::subs_sp).collect();
+                            for v in vs {
+                                libs.push(v.to_string());
+                            }
+                        },
+                        None => {
+                            libs.push(value.name.to_string());
+                        }
+                    }
                     if let Err(_) = self.search(&value.root, &git_librarys::CGitLibrarys{
                         name: Some(value.name.to_string()),
-                        version: Some(value.version.to_string())
+                        version: Some(value.version.to_string()),
+                        libs: libs
                     }, params, results) {
                         return Err("search error");
                     };

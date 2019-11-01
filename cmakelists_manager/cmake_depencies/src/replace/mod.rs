@@ -72,20 +72,24 @@ impl CReplace {
                     let mut s = String::new();
                     match &item.paramType {
                         git_lib::ParamType::LibName => {
-                            s.push_str(&item.name);
-                            if cfg!(target_os="windows") {
-                                s.push_str("\r");
+                            for n in &item.name {
+                                s.push_str(n);
+                                if cfg!(target_os="windows") {
+                                    s.push_str("\r");
+                                }
+                                s.push_str("\n");
                             }
-                            s.push_str("\n");
                         },
                         git_lib::ParamType::LibPath => {
-                            s.push('"');
-                            s.push_str(&item.name);
-                            s.push('"');
-                            if cfg!(target_os="windows") {
-                                s.push_str("\r");
+                            for n in &item.name {
+                                s.push('"');
+                                s.push_str(n);
+                                s.push('"');
+                                if cfg!(target_os="windows") {
+                                    s.push_str("\r");
+                                }
+                                s.push_str("\n");
                             }
-                            s.push_str("\n");
                         },
                         git_lib::ParamType::Include => {
                             let name = match &library.name {
@@ -98,13 +102,15 @@ impl CReplace {
                             match libs.get(name) {
                                 Some(_) => {},
                                 None => {
-                                    s.push('"');
-                                    s.push_str(&item.name);
-                                    s.push('"');
-                                    if cfg!(target_os="windows") {
-                                        s.push_str("\r");
+                                    for n in &item.name {
+                                        s.push('"');
+                                        s.push_str(n);
+                                        s.push('"');
+                                        if cfg!(target_os="windows") {
+                                            s.push_str("\r");
+                                        }
+                                        s.push_str("\n");
                                     }
-                                    s.push_str("\n");
                                     libs.insert(name.to_string());
                                 }
                             }
