@@ -8,6 +8,7 @@ const keyword_name: &str = "name";
 const keyword_version: &str = "version";
 const keyword_subs: &str = "subs";
 pub const subs_sp: &str = ",";
+pub const subs_null: &str = "_";
 
 #[derive(Default, Debug, Clone)]
 pub struct CGitLibrarys {
@@ -20,13 +21,17 @@ impl object::IObject for CGitLibrarys {
     fn on_kv(&mut self, key: &str, value: &str) {
         if key == keyword_name {
             self.name = Some(value.to_string());
+            self.libs = vec![value.to_string()];
         } else if key == keyword_version {
             self.version = Some(value.to_string());
         } else if key == keyword_subs {
+            if value.trim() == subs_null {
+                return;
+            }
             let mut subs = Vec::new();
             let vs: Vec<&str> = value.split(subs_sp).collect();
             for v in vs {
-                subs.push(v.to_string());
+                subs.push(v.trim().to_string());
             }
             self.libs = subs;
         }
@@ -41,9 +46,6 @@ impl CGitLibParser {
         let mut gitlib = CGitLibrarys::default();
         let parser = object::CObjectParser::new();
         parser.parse(data, &mut gitlib);
-        if gitlib.libs.len() == 0 {
-            gitlib.libs.push(gitlib.name.clone().expect("name field is null"));
-        }
         gitlib
     }
 }

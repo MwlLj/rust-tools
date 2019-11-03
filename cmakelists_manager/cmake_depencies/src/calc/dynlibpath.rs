@@ -311,6 +311,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             };
             config::libconfig::CAttributes{
                 platform: None,
+                target: None,
                 debug: None,
                 release: None,
                 rule: None,
@@ -334,6 +335,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             };
             config::libconfig::CAttributes{
                 platform: None,
+                target: None,
                 debug: None,
                 release: None,
                 rule: None,

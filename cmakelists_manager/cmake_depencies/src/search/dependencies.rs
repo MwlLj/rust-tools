@@ -168,15 +168,16 @@ impl CDependSearcher {
                         }
                     };
                     let libpath = match &libpath.libpath {
-                        Some(p) => p,
+                        Some(p) => p.to_string(),
                         None => {
                             println!("get libpath error");
-                            return Err("get libpath error");
+                            // return Err("get libpath error");
+                            "".to_string()
                         }
                     };
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: vec![libpath.to_string()],
+                        name: vec![libpath],
                         paramType: param.paramType.clone()
                     });
                 },
@@ -248,9 +249,12 @@ impl CDependSearcher {
                     let mut libs = Vec::new();
                     match &value.subs {
                         Some(subs) => {
-                            let vs: Vec<&str> = subs.split(git_librarys::subs_sp).collect();
-                            for v in vs {
-                                libs.push(v.to_string());
+                            if subs.trim() == git_librarys::subs_null {
+                            } else {
+                                let vs: Vec<&str> = subs.split(git_librarys::subs_sp).collect();
+                                for v in vs {
+                                    libs.push(v.trim().to_string());
+                                }
                             }
                         },
                         None => {

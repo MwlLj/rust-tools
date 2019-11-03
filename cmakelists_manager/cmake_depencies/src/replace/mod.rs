@@ -73,6 +73,9 @@ impl CReplace {
                     match &item.paramType {
                         git_lib::ParamType::LibName => {
                             for n in &item.name {
+                                if n.len() == 0 {
+                                    continue;
+                                }
                                 s.push_str(n);
                                 if cfg!(target_os="windows") {
                                     s.push_str("\r");
@@ -82,6 +85,9 @@ impl CReplace {
                         },
                         git_lib::ParamType::LibPath => {
                             for n in &item.name {
+                                if n.len() == 0 {
+                                    continue;
+                                }
                                 s.push('"');
                                 s.push_str(n);
                                 s.push('"');
@@ -103,6 +109,9 @@ impl CReplace {
                                 Some(_) => {},
                                 None => {
                                     for n in &item.name {
+                                        if n.len() == 0 {
+                                            continue;
+                                        }
                                         s.push('"');
                                         s.push_str(n);
                                         s.push('"');

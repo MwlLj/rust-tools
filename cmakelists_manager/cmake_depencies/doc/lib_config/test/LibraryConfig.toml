@@ -36,18 +36,38 @@ libpathRule = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'
 # 如果每个版本有自己的attributes, 优先取版本下的attributes, 如果版本下不存在attributes, 则取 package 中的attributes
 platform = """
         `judge:"
-        if var:'platform' == str:'win64' {
-            win64
-        } elseif var:'platform' == str:'win32' {
-            win32 
-        } elseif var:'platform' == str:'gnu64' {
-            gnu64
+        if var:'platform' == str:'vs2010' {
+            vs2010
+        } elseif var:'platform' == str:'vs2015' {
+            vs2015
+        } elseif var:'platform' == str:'gcc' {
+            gcc
         } else {
         }
         "`"""
-debug = "_d"
+target = """
+        `judge:"
+        if var:'target' == str:'win64' {
+            win64
+        } elseif var:'target' == str:'win32' {
+            win32
+        } elseif var:'target' == str:'centos64' {
+            centos64
+        } else {
+        }
+        "`"""
+debug = """
+        `judge:"
+        if var:'target' == str:'win64' {
+            _d
+        } elseif var:'target' == str:'win32' {
+            _d
+        } elseif var:'platform' == str:'gnu64' {
+        } else {
+        }
+        "`"""
 release = ""
-rule = "$name.$version.$name_platform$d_r"
+rule = "$name.$version.$name_platform$d_r$my_version"
 includeRule = "`var:'config'`/include/`var:'version'`"
 libpathRule = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`"
 
@@ -55,12 +75,21 @@ libpathRule = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'
 [versions."0.1.10".attributes.map]
 name_platform = """
         `judge:"
-        if var:'platform' == str:'win64' {
+        if var:'target' == str:'win64' {
             64
-        } elseif var:'platform' == str:'win32' {
+        } elseif var:'target' == str:'win32' {
             32
-        } elseif var:'platform' == str:'gnu64' {
+        } elseif var:'target' == str:'gnu64' {
             64
+        } else {
+        }
+        "`"""
+my_version = """
+        `judge:"
+        if var:'target' == str:'win64' {
+        } elseif var:'target' == str:'win32' {
+        } elseif var:'target' == str:'gnu64' {
+            -`var:'version'`
         } else {
         }
         "`"""

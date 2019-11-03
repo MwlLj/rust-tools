@@ -22,7 +22,7 @@ const keyword_target: &str = "target";
 const keyword_d_r: &str = "d_r";
 
 const cmake_keyword_debug: &str = "debug";
-const cmake_keyword_release: &str = "release";
+const cmake_keyword_release: &str = "optimized";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -195,7 +195,14 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                 }
             },
             parse::joinv2::ValueType::JudgeBody => {
-                result.push_str(t);
+                let mut extJson = extraJson.clone();
+                let mut extJsonClone = extJson.clone();
+                let mut body = String::new();
+                if let Ok(()) = join(t, version, platform, target, &mut extJson, &mut extJsonClone, &mut body) {
+                    result.push_str(&body);
+                } else {
+                    result.push_str(t);
+                }
             },
             parse::joinv2::ValueType::Str => {
                 match parseMode {
@@ -274,6 +281,12 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                     platform_default
                 }
             };
+            let target = match &a.target {
+                Some(t) => t,
+                None => {
+                    target_default
+                }
+            };
             let debug = match &a.debug {
                 Some(d) => d,
                 None => {
@@ -294,6 +307,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
+                target: Some(target.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
@@ -307,6 +321,12 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                 Some(p) => p,
                 None => {
                     platform_default
+                }
+            };
+            let target = match &libPackage.platform {
+                Some(t) => t,
+                None => {
+                    target_default
                 }
             };
             let debug = match &libPackage.debug {
@@ -329,6 +349,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
+                target: Some(target.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
@@ -351,6 +372,17 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
         }
     };
     if let Err(err) = join(p, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut targetValue = String::new();
+    let t = match &attributes.target {
+        Some(t) => t,
+        None => {
+            panic!("target is not exist");
+        }
+    };
+    if let Err(err) = join(t, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };

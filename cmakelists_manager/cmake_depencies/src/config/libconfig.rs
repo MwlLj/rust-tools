@@ -8,6 +8,7 @@ pub struct CPackage {
     pub authors: Option<String>,
     pub edition: Option<String>,
     pub platform: Option<String>,
+    pub target: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
@@ -19,6 +20,7 @@ pub struct CPackage {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct CAttributes {
     pub platform: Option<String>,
+    pub target: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
