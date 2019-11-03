@@ -25,15 +25,14 @@ impl object::IObject for CGitLibrarys {
         } else if key == keyword_version {
             self.version = Some(value.to_string());
         } else if key == keyword_subs {
+            self.libs = Vec::new();
             if value.trim() == subs_null {
                 return;
             }
-            let mut subs = Vec::new();
             let vs: Vec<&str> = value.split(subs_sp).collect();
             for v in vs {
-                subs.push(v.trim().to_string());
+                self.libs.push(v.trim().to_string());
             }
-            self.libs = subs;
         }
     }
 }
