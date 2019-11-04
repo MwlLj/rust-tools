@@ -149,6 +149,9 @@ impl CDependSearcher {
                             return Err("calc full name error");
                         }
                     };
+                    if fullNames.len() == 0 {
+                        continue;
+                    }
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
                         name: fullNames,
@@ -172,7 +175,8 @@ impl CDependSearcher {
                         None => {
                             println!("get libpath error");
                             // return Err("get libpath error");
-                            "".to_string()
+                            // "".to_string()
+                            continue;
                         }
                     };
                     rs.push(CSearchResult{
@@ -222,7 +226,8 @@ impl CDependSearcher {
                         Some(p) => p,
                         None => {
                             println!("get include error");
-                            return Err("get include error");
+                            continue;
+                            // return Err("get include error");
                         }
                     };
                     rs.push(CSearchResult{
@@ -259,6 +264,7 @@ impl CDependSearcher {
                     };
                     ds.push(structs::libs::CLibInfo{
                         name: &key,
+                        enable: &value.enable,
                         subs: &value.subs,
                         version: &value.version,
                         no: &value.no,
@@ -286,11 +292,17 @@ impl CDependSearcher {
                             libs.push(value.name.to_string());
                         }
                     }
+                    let mut paramsClone = params.clone();
+                    if let Some(enable) = value.enable {
+                        for paramMut in paramsClone.iter_mut() {
+                            (*paramMut).enable = Some(enable.to_string());
+                        }
+                    };
                     if let Err(_) = self.search(&value.root, &git_librarys::CGitLibrarys{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         libs: libs
-                    }, params, results) {
+                    }, &paramsClone, results) {
                         return Err("search error");
                     };
                 }

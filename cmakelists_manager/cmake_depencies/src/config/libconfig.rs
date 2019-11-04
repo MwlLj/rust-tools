@@ -45,6 +45,7 @@ impl CAttributes {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct CLib {
     pub version: String,
+    pub enable: Option<String>,
     pub subs: Option<String>,
     pub root: Option<String>,
     pub no: u32

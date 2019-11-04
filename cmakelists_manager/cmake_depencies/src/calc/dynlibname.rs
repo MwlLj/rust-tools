@@ -6,6 +6,7 @@ use json::{JsonValue};
 use std::collections::HashMap;
 
 const platform_default: &str = "win64";
+const enable_default: &str = "true";
 const debug_default: &str = "_d";
 const release_default: &str = "";
 const rule_default: &str = "$name.$version.$platform$d_r";
@@ -23,6 +24,9 @@ const keyword_d_r: &str = "d_r";
 
 const cmake_keyword_debug: &str = "debug";
 const cmake_keyword_release: &str = "optimized";
+
+const enable_true: &str = "true";
+const enable_false: &str = "false";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -257,6 +261,12 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             target_default
         }
     };
+    let enable = match &exeParam.enable {
+        Some(t) => t,
+        None => {
+            enable_default
+        }
+    };
     let mut extraJson = JsonValue::Null;
     if extraType == extra_type_string {
     } else if extraType == extra_type_json {
@@ -360,6 +370,17 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
         }
     };
     /*
+    ** Determine whether it is enabled
+    */
+    let mut enableValue = String::new();
+    if let Err(err) = join(enable, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    if enableValue == enable_false {
+        return Some(Vec::new());
+    }
+    /*
     ** Parse each field in the attributes,
     ** and splice according to the parameters provided by the application,
     ** and update each field of the attributes with the result.
@@ -382,7 +403,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             panic!("target is not exist");
         }
     };
-    if let Err(err) = join(t, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
+    if let Err(err) = join(t, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut targetValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };

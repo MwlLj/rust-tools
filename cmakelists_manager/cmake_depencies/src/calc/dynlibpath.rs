@@ -12,6 +12,7 @@ const libpath_rule_default: &str = "`var:'config'`/lib/`var:'version'`/`var:'tar
 const include_rule_default: &str = "`var:'config'`/include/`var:'version'";
 const platform_default: &str = "";
 const target_default: &str = "";
+const enable_default: &str = "true";
 
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
@@ -21,6 +22,9 @@ const keyword_version: &str = "version";
 const keyword_target: &str = "target";
 const keyword_platform: &str = "platform";
 const keyword_config: &str = "config";
+
+const enable_true: &str = "true";
+const enable_false: &str = "false";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -279,6 +283,12 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             target_default
         }
     };
+    let enable = match &exeParam.enable {
+        Some(e) => e,
+        None => {
+            enable_default
+        }
+    };
     let mut extraJson = JsonValue::Null;
     if extraType == extra_type_string {
     } else if extraType == extra_type_json {
@@ -345,6 +355,18 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             }
         }
     };
+    let mut r = CResult::default();
+    /*
+    ** Determine whether it is enabled
+    */
+    let mut enableValue = String::new();
+    if let Err(err) = join(enable, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    if enableValue == enable_false {
+        return Some(r);
+    }
     /*
     ** Parse each field in the attributes,
     ** and splice according to the parameters provided by the application,
@@ -363,7 +385,6 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
         return None;
     };
     // println!("###### {:?}", &includeValue);
-    let mut r = CResult::default();
     /*
     ** Get absolute path
     */
@@ -404,7 +425,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             }
         },
         Err(err) => {
-            println!("[Error] include rule kjoin path error");
+            println!("[Error] include rule join path error");
         }
     }
     Some(r)
