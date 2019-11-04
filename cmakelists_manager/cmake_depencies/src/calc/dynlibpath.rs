@@ -1,6 +1,7 @@
-use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
+use crate::parse::{self, git_lib, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
 use crate::config;
 use crate::structs;
+use git_lib::ParamType;
 
 use json::{JsonValue};
 use path_abs::PathAbs;
@@ -388,45 +389,52 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
     /*
     ** Get absolute path
     */
-    match Path::new(&libpathValue).canonicalize() {
-        Ok(p) => {
-            match p.to_str() {
-                Some(s) => {
-                    if cfg!(target_os="windows"){
-                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                        r.libpath = Some(t);
-                    } else {
-                        r.libpath = Some(s.to_string());
+    match exeParam.paramType {
+        ParamType::LibPath => {
+            match Path::new(&libpathValue).canonicalize() {
+                Ok(p) => {
+                    match p.to_str() {
+                        Some(s) => {
+                            if cfg!(target_os="windows"){
+                                let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                r.libpath = Some(t);
+                            } else {
+                                r.libpath = Some(s.to_string());
+                            }
+                        },
+                        None => {
+                            println!("[Error] libpath abs to_str error");
+                        }
                     }
                 },
-                None => {
-                    println!("[Error] libpath abs to_str error");
+                Err(err) => {
+                    println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
+                }
+            };
+        },
+        ParamType::Include => {
+            match Path::new(&includeValue).canonicalize() {
+                Ok(p) => {
+                    match p.as_os_str().to_str() {
+                        Some(s) => {
+                            if cfg!(target_os="windows"){
+                                let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                r.include = Some(t);
+                            } else {
+                                r.include = Some(s.to_string());
+                            }
+                        },
+                        None => {
+                            println!("[Erorr] include abs to_str error");
+                        }
+                    }
+                },
+                Err(err) => {
+                    println!("[Error] include rule join path error");
                 }
             }
         },
-        Err(err) => {
-            println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
-        }
-    };
-    match Path::new(&includeValue).canonicalize() {
-        Ok(p) => {
-            match p.as_os_str().to_str() {
-                Some(s) => {
-                    if cfg!(target_os="windows"){
-                        let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                        r.include = Some(t);
-                    } else {
-                        r.include = Some(s.to_string());
-                    }
-                },
-                None => {
-                    println!("[Erorr] include abs to_str error");
-                }
-            }
-        },
-        Err(err) => {
-            println!("[Error] include rule join path error");
-        }
+        _ => {}
     }
     Some(r)
 }
