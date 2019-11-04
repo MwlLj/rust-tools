@@ -18,9 +18,9 @@ pub struct CReplace {
 }
 
 impl CReplace {
-    pub fn replace(&self, cmakePath: &str, root: &str) -> Result<(), &str> {
+    pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str) -> Result<(), &str> {
         // self.search(root, content, librarys, params)
-        let (librarys, params, mut content) = match self.environmenter.parse(cmakePath) {
+        let (librarys, params, mut content) = match self.environmenter.parse(cmakePath, cbbStoreRoot) {
             Ok(r) => r,
             Err(err) => {
                 return Err("cmake parse error");
@@ -67,6 +67,7 @@ impl CReplace {
                 println!("[Error] search error, err: {}", err);
                 return;
             };
+            // println!("{:?}", &results);
             for result in results.iter() {
                 for item in result.iter() {
                     let mut s = String::new();
@@ -98,6 +99,19 @@ impl CReplace {
                             }
                         },
                         git_lib::ParamType::Include => {
+                            for n in &item.name {
+                                if n.len() == 0 {
+                                    continue;
+                                }
+                                s.push('"');
+                                s.push_str(n);
+                                s.push('"');
+                                if cfg!(target_os="windows") {
+                                    s.push_str("\r");
+                                }
+                                s.push_str("\n");
+                            }
+                            /*
                             let name = match &library.name {
                                 Some(n) => n,
                                 None => {
@@ -106,7 +120,8 @@ impl CReplace {
                                 }
                             };
                             match libs.get(name) {
-                                Some(_) => {},
+                                Some(_) => {
+                                },
                                 None => {
                                     for n in &item.name {
                                         if n.len() == 0 {
@@ -123,6 +138,7 @@ impl CReplace {
                                     libs.insert(name.to_string());
                                 }
                             }
+                            */
                         },
                         _ => {}
                     }
@@ -212,7 +228,7 @@ mod test {
     #[ignore]
     fn replaceTest() {
         let replacer = CReplace::new();
-        replacer.replace("./doc/exe_cmake/CMakelists.config", ".");
+        replacer.replace("./doc/exe_cmake/CMakelists.config", ".", ".");
     }
 }
 

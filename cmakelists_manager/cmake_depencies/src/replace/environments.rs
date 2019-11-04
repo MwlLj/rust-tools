@@ -18,6 +18,9 @@ const keyword_set: &str = "set";
 
 const keyword_target_link_libraries: &str = "target_link_libraries";
 const keyword_link_directories: &str = "link_directories";
+const keyword_include_directories: &str = "include_directories";
+
+const keyword_cbb_store_root: &str = "${CBB_STORE_ROOT}";
 
 const cmake_keyword_debug: &str = "debug";
 const cmake_keyword_release: &str = "release";
@@ -40,7 +43,8 @@ struct CCall {
     writeStauts: WriteStatus,
     mode: Mode,
     gitLibrarys: Vec<git_librarys::CGitLibrarys>,
-    libraryConfigs: Vec<git_lib::CParam>
+    libraryConfigs: Vec<git_lib::CParam>,
+    cbbStoreRoot: String
 }
 
 impl ICall for CCall {
@@ -68,7 +72,7 @@ impl ICall for CCall {
                 } else if self.starts_with(&v, keyword_git_lib) {
                     self.removeContentRightLen(value.len() + 1);
                     // println!("{}, {:?}, {}", self.content.len(), &v, keyword_git_lib);
-                    let parser = git_lib::CGitLibParser::new();
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
                     param.paramType = ParamType::LibName;
                     param.startIndex = self.content.len();
@@ -76,7 +80,7 @@ impl ICall for CCall {
                 } else if self.starts_with(&v, keyword_git_libpath) {
                     self.removeContentRightLen(value.len() + 1);
                     // println!("{}, {:?}, {}, {}", self.content.len(), &v, keyword_git_libpath, &self.content);
-                    let parser = git_lib::CGitLibParser::new();
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
                     param.paramType = ParamType::LibPath;
                     param.startIndex = self.content.len();
@@ -84,11 +88,14 @@ impl ICall for CCall {
                 } else if self.starts_with(&v, keyword_git_include) {
                     self.removeContentRightLen(value.len() + 1);
                     // println!("{}, {:?}, {}", self.content.len(), &v, keyword_git_include);
-                    let parser = git_lib::CGitLibParser::new();
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
                     param.paramType = ParamType::Include;
                     param.startIndex = self.content.len();
                     self.libraryConfigs.push(param);
+                } else if (key.to_ascii_lowercase() == keyword_include_directories.to_ascii_lowercase())
+                && (value.starts_with(keyword_cbb_store_root)) {
+                    self.appendIncludeReplace(value);
                 }
             },
             Mode::GitLibrarys => {
@@ -148,6 +155,47 @@ impl CCall {
         }
     }
 
+    fn appendIncludeReplace(&mut self, value: &str) {
+        let path = Path::new(&self.cbbStoreRoot);
+        let mut afterPath = value.trim_left_matches(keyword_cbb_store_root).to_string();
+        let bytes = afterPath.as_bytes();
+        if bytes.len() > 0 {
+            let c = bytes[0];
+            if c == b'/' || c == b'\\' {
+                afterPath.remove(0);
+            }
+        }
+        let path = path.join(&afterPath);
+        /*
+        ** Convert to absolute path
+        */
+        match path.canonicalize() {
+            Ok(p) => {
+                match p.to_str() {
+                    Some(s) => {
+                        if cfg!(target_os="windows"){
+                            let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                            self.removeContentRightLen(value.len() + 1);
+                            self.content.insert(self.content.len(), '"');
+                            self.content.insert_str(self.content.len(), &t);
+                            self.content.insert(self.content.len(), '"');
+                        } else {
+                            self.removeContentRightLen(value.len() + 1);
+                            self.content.insert_str(self.content.len(), s);
+                        }
+                    },
+                    None => {
+                        println!("[Error] include path abs to_str error");
+                    }
+                }
+            },
+            Err(err) => {
+                println!("[Error] include path, path: {}", &value);
+            }
+        }
+        // println!("{:?}, {}, {:?}", path.to_str(), afterPath, &self.path);
+    }
+
     fn starts_with(&self, content: &str, s: &str) -> bool {
         let mut word = String::new();
         for c in content.chars() {
@@ -190,13 +238,14 @@ impl CCall {
 }
 
 impl CCall {
-    fn new() -> CCall {
+    fn new(cbbStoreRoot: &str) -> CCall {
         CCall{
             content: String::new(),
             writeStauts: WriteStatus::Write,
             mode: Mode::Normal,
             gitLibrarys: Vec::new(),
-            libraryConfigs: Vec::new()
+            libraryConfigs: Vec::new(),
+            cbbStoreRoot: cbbStoreRoot.to_string()
         }
     }
 }
@@ -206,8 +255,8 @@ pub struct CEnvironments {
 }
 
 impl CEnvironments {
-    pub fn parse(&self, path: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, String), &str> {
-        let mut call = CCall::new();
+    pub fn parse(&self, path: &str, cbbStoreRoot: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, String), &str> {
+        let mut call = CCall::new(cbbStoreRoot);
         if let Err(err) = self.parser.parse(path, &mut call) {
             return Err(err);
         };

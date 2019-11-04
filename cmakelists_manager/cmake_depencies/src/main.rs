@@ -4,7 +4,7 @@ use path::walk;
 
 const keyword_cmake_file: &str = "CMakelists.config";
 
-fn start(root: &str, libRoot: &str) {
+fn start(root: &str, libRoot: &str, cbbStoreRoot: &str) {
     let replacer = CReplace::new();
     walk::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::Type| -> bool {
         match t {
@@ -12,7 +12,7 @@ fn start(root: &str, libRoot: &str) {
             },
             walk::Type::File => {
                 if name == keyword_cmake_file {
-                    replacer.replace(path, libRoot);
+                    replacer.replace(path, libRoot, cbbStoreRoot);
                 }
             }
         }
@@ -21,13 +21,20 @@ fn start(root: &str, libRoot: &str) {
 }
 
 fn main() {
+    let keyword_cbb_store_root = "-cbb-store-root";
     let mut cmdRegister = CCmd::new();
     let root = cmdRegister.register_with_desc("-root", ".", "cmake search root");
     let libRoot = cmdRegister.register_with_desc("-lib-root", ".", "lib search root");
+    let cbbStoreRoot = cmdRegister.register_with_desc(keyword_cbb_store_root, ".", "dbb store root, default == lib-root");
     cmdRegister.parse();
+
+    if !cmdRegister.has(keyword_cbb_store_root) {
+        *cbbStoreRoot.borrow_mut() = libRoot.borrow().to_string();
+    }
 
     let root = root.borrow();
     let libRoot = libRoot.borrow();
+    let cbbStoreRoot = cbbStoreRoot.borrow();
 
-    start(&*root, &*libRoot);
+    start(&*root, &*libRoot, &*cbbStoreRoot);
 }

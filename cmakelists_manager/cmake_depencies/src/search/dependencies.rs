@@ -186,6 +186,31 @@ impl CDependSearcher {
                     ** Get the dependent library path
                     */
                     // println!("path: {}, parent: {}", path, parent);
+                    /*
+                    let path = match &param.path {
+                        Some(path) => {
+                            path.to_string()
+                        },
+                        None => {
+                            let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+                                Some(l) => l,
+                                None => {
+                                    println!("calc include error");
+                                    return Err("calc include error");
+                                }
+                            };
+                            let include = match &libpath.include {
+                                Some(p) => p,
+                                None => {
+                                    println!("get include error");
+                                    return Err("get include error");
+                                }
+                            };
+                            include.to_string()
+                        }
+                    };
+                    */
+                    // println!("############, {}", &path);
                     let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
                         Some(l) => l,
                         None => {
