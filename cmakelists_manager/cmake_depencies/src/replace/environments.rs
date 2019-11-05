@@ -301,7 +301,7 @@ mod test {
     // #[ignore]
     fn environmentsTest() {
         let parser = CEnvironments::new();
-        parser.parse("./doc/exe_cmake/CMakelists.config");
+        parser.parse("./doc/exe_cmake/CMakeLists.config");
     }
 
     #[test]

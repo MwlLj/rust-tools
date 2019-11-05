@@ -302,7 +302,7 @@ mod test {
     #[ignore]
     fn cmakeParserTest() {
         let parser = CCmakeParser::new(&structs::param::CRunArgs::default(), ".");
-        parser.parse("./doc/exe_cmake/CMakelists.config");
+        parser.parse("./doc/exe_cmake/CMakeLists.config");
     }
 }
 

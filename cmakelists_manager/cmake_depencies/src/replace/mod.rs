@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-const cmakelist_name: &str = "CMakelists.txt";
+const cmakelist_name: &str = "CMakeLists.txt";
 
 pub struct CReplace {
     environmenter: CEnvironments
@@ -228,7 +228,7 @@ mod test {
     #[ignore]
     fn replaceTest() {
         let replacer = CReplace::new();
-        replacer.replace("./doc/exe_cmake/CMakelists.config", ".", ".");
+        replacer.replace("./doc/exe_cmake/CMakeLists.config", ".", ".");
     }
 }
 

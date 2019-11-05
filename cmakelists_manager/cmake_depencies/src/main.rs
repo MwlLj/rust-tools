@@ -2,7 +2,7 @@ use cmake_depencies::replace::CReplace;
 use rust_parse::cmd::CCmd;
 use path::walk;
 
-const keyword_cmake_file: &str = "CMakelists.config";
+const keyword_cmake_file: &str = "CMakeLists.config";
 
 fn start(root: &str, libRoot: &str, cbbStoreRoot: &str) {
     let replacer = CReplace::new();
