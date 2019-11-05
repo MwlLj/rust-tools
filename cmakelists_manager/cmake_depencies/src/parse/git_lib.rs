@@ -12,6 +12,9 @@ const keyword_version: &str = "version";
 const keyword_platform: &str = "platform";
 const keyword_target: &str = "target";
 const keyword_enable: &str = "enable";
+const keyword_include_enable: &str = "include_enable";
+const keyword_libpath_enable: &str = "libpath_enable";
+const keyword_libname_enable: &str = "libname_enable";
 const keyword_extra: &str = "extra";
 const keyword_extra_type: &str = "extra_type";
 
@@ -21,6 +24,9 @@ pub struct CGitLib<'a> {
     pub platform: Option<String>,
     pub target: Option<String>,
     pub enable: Option<String>,
+    pub includeEnable: Option<String>,
+    pub libpathEnable: Option<String>,
+    pub libnameEnable: Option<String>,
     pub extra: Option<String>,
     pub extraType: Option<String>
 }
@@ -47,6 +53,9 @@ pub struct CParam {
     pub platform: Option<String>,
     pub target: Option<String>,
     pub enable: Option<String>,
+    pub includeEnable: Option<String>,
+    pub libpathEnable: Option<String>,
+    pub libnameEnable: Option<String>,
     pub extra: Option<String>,
     pub extraType: Option<String>
 }
@@ -63,6 +72,12 @@ impl object::IObject for CParam {
             self.extraType = Some(value.to_string());
         } else if key == keyword_enable {
             self.enable = Some(value.to_string());
+        } else if key == keyword_include_enable {
+            self.includeEnable = Some(value.to_string());
+        } else if key == keyword_libpath_enable {
+            self.libpathEnable = Some(value.to_string());
+        } else if key == keyword_libname_enable {
+            self.libnameEnable = Some(value.to_string());
         }
     }
 }

@@ -265,6 +265,9 @@ impl CDependSearcher {
                     ds.push(structs::libs::CLibInfo{
                         name: &key,
                         enable: &value.enable,
+                        includeEnable: &value.includeEnable,
+                        libpathEnable: &value.libpathEnable,
+                        libnameEnable: &value.libnameEnable,
                         subs: &value.subs,
                         version: &value.version,
                         no: &value.no,
@@ -293,11 +296,27 @@ impl CDependSearcher {
                         }
                     }
                     let mut paramsClone = params.clone();
+                    /*
                     if let Some(enable) = value.enable {
                         for paramMut in paramsClone.iter_mut() {
                             (*paramMut).enable = Some(enable.to_string());
                         }
                     };
+                    */
+                    for paramMut in paramsClone.iter_mut() {
+                        if let Some(enable) = value.enable {
+                            (*paramMut).enable = Some(enable.to_string());
+                        };
+                        if let Some(includeEnable) = value.includeEnable {
+                            (*paramMut).includeEnable = Some(includeEnable.to_string());
+                        };
+                        if let Some(libpathEnable) = value.libpathEnable {
+                            (*paramMut).libpathEnable = Some(libpathEnable.to_string());
+                        };
+                        if let Some(libnameEnable) = value.libnameEnable {
+                            (*paramMut).libnameEnable = Some(libnameEnable.to_string());
+                        };
+                    }
                     if let Err(_) = self.search(&value.root, &git_librarys::CGitLibrarys{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),

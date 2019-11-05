@@ -14,6 +14,8 @@ const include_rule_default: &str = "`var:'config'`/include/`var:'version'";
 const platform_default: &str = "";
 const target_default: &str = "";
 const enable_default: &str = "true";
+const libpath_enable_default: &str = "true";
+const include_enable_default: &str = "true";
 
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
@@ -320,9 +322,56 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
                     include_rule_default
                 }
             };
+            let includeEnable = match &a.includeEnable {
+                Some(e) => {
+                    match &exeParam.includeEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.includeEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            include_enable_default
+                        }
+                    }
+                }
+            };
+            let libpathEnable = match &a.libpathEnable {
+                Some(e) => {
+                    match &exeParam.libpathEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.libpathEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            libpath_enable_default
+                        }
+                    }
+                }
+            };
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
+                includeEnable: Some(includeEnable.to_string()),
+                libpathEnable: Some(libpathEnable.to_string()),
+                libnameEnable: None,
                 debug: None,
                 release: None,
                 rule: None,
@@ -344,9 +393,56 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
                     include_rule_default
                 }
             };
+            let includeEnable = match &libPackage.includeEnable {
+                Some(e) => {
+                    match &exeParam.includeEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.includeEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            include_enable_default
+                        }
+                    }
+                }
+            };
+            let libpathEnable = match &libPackage.libpathEnable {
+                Some(e) => {
+                    match &exeParam.libpathEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.libpathEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            libpath_enable_default
+                        }
+                    }
+                }
+            };
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
+                includeEnable: Some(includeEnable.to_string()),
+                libpathEnable: Some(libpathEnable.to_string()),
+                libnameEnable: None,
                 debug: None,
                 release: None,
                 rule: None,
@@ -368,6 +464,16 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
     if enableValue == enable_false {
         return Some(r);
     }
+    let mut libpathEnableValue = String::new();
+    if let Err(err) = join(&attributes.libpathEnable.expect("libpathEnable is null"), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathEnableValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut includeEnableValue = String::new();
+    if let Err(err) = join(&attributes.includeEnable.expect("includeEnable is null"), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeEnableValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
     /*
     ** Parse each field in the attributes,
     ** and splice according to the parameters provided by the application,
@@ -391,47 +497,55 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
     */
     match exeParam.paramType {
         ParamType::LibPath => {
-            match Path::new(&libpathValue).canonicalize() {
-                Ok(p) => {
-                    match p.to_str() {
-                        Some(s) => {
-                            if cfg!(target_os="windows"){
-                                let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                r.libpath = Some(t);
-                            } else {
-                                r.libpath = Some(s.to_string());
+            if libpathEnableValue == enable_true {
+                match Path::new(&libpathValue).canonicalize() {
+                    Ok(p) => {
+                        match p.to_str() {
+                            Some(s) => {
+                                if cfg!(target_os="windows"){
+                                    let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    r.libpath = Some(t);
+                                } else {
+                                    r.libpath = Some(s.to_string());
+                                }
+                            },
+                            None => {
+                                println!("[Error] libpath abs to_str error");
                             }
-                        },
-                        None => {
-                            println!("[Error] libpath abs to_str error");
                         }
+                    },
+                    Err(err) => {
+                        println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
                     }
-                },
-                Err(err) => {
-                    println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
-                }
-            };
+                };
+            } else {
+                println!("[Info] libpathEnable is false");
+            }
         },
         ParamType::Include => {
-            match Path::new(&includeValue).canonicalize() {
-                Ok(p) => {
-                    match p.as_os_str().to_str() {
-                        Some(s) => {
-                            if cfg!(target_os="windows"){
-                                let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                r.include = Some(t);
-                            } else {
-                                r.include = Some(s.to_string());
+            if includeEnableValue == enable_true {
+                match Path::new(&includeValue).canonicalize() {
+                    Ok(p) => {
+                        match p.as_os_str().to_str() {
+                            Some(s) => {
+                                if cfg!(target_os="windows"){
+                                    let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    r.include = Some(t);
+                                } else {
+                                    r.include = Some(s.to_string());
+                                }
+                            },
+                            None => {
+                                println!("[Erorr] include abs to_str error");
                             }
-                        },
-                        None => {
-                            println!("[Erorr] include abs to_str error");
                         }
+                    },
+                    Err(err) => {
+                        println!("[Error] include rule join path error");
                     }
-                },
-                Err(err) => {
-                    println!("[Error] include rule join path error");
                 }
+            } else {
+                println!("[Info] includeEnable is false");
             }
         },
         _ => {}

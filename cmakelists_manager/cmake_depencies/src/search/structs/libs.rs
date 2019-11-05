@@ -2,6 +2,9 @@
 pub struct CLibInfo<'a> {
     pub name: &'a str,
     pub enable: &'a Option<String>,
+    pub includeEnable: &'a Option<String>,
+    pub libpathEnable: &'a Option<String>,
+    pub libnameEnable: &'a Option<String>,
     pub subs: &'a Option<String>,
     pub version: &'a str,
     pub no: &'a u32,

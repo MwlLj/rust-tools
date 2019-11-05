@@ -9,6 +9,9 @@ pub struct CPackage {
     pub edition: Option<String>,
     pub platform: Option<String>,
     pub target: Option<String>,
+    pub includeEnable: Option<String>,
+    pub libpathEnable: Option<String>,
+    pub libnameEnable: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
@@ -21,6 +24,9 @@ pub struct CPackage {
 pub struct CAttributes {
     pub platform: Option<String>,
     pub target: Option<String>,
+    pub includeEnable: Option<String>,
+    pub libpathEnable: Option<String>,
+    pub libnameEnable: Option<String>,
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
@@ -46,6 +52,9 @@ impl CAttributes {
 pub struct CLib {
     pub version: String,
     pub enable: Option<String>,
+    pub includeEnable: Option<String>,
+    pub libpathEnable: Option<String>,
+    pub libnameEnable: Option<String>,
     pub subs: Option<String>,
     pub root: Option<String>,
     pub no: u32

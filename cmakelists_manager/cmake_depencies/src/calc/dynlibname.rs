@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 const platform_default: &str = "win64";
 const enable_default: &str = "true";
+const libname_enable_default: &str = "true";
 const debug_default: &str = "_d";
 const release_default: &str = "";
 const rule_default: &str = "$name.$version.$platform$d_r";
@@ -297,6 +298,28 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                     target_default
                 }
             };
+            let libnameEnable = match &a.libnameEnable {
+                Some(e) => {
+                    match &exeParam.libnameEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.libnameEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            libname_enable_default
+                        }
+                    }
+                }
+            };
             let debug = match &a.debug {
                 Some(d) => d,
                 None => {
@@ -318,6 +341,9 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
+                includeEnable: None,
+                libpathEnable: None,
+                libnameEnable: Some(libnameEnable.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
@@ -337,6 +363,28 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                 Some(t) => t,
                 None => {
                     target_default
+                }
+            };
+            let libnameEnable = match &libPackage.libnameEnable {
+                Some(e) => {
+                    match &exeParam.libnameEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            e
+                        }
+                    }
+                },
+                None => {
+                    match &exeParam.libnameEnable {
+                        Some(en) => {
+                            en
+                        },
+                        None => {
+                            libname_enable_default
+                        }
+                    }
                 }
             };
             let debug = match &libPackage.debug {
@@ -360,6 +408,9 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
+                includeEnable: None,
+                libpathEnable: None,
+                libnameEnable: Some(libnameEnable.to_string()),
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
@@ -378,6 +429,23 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
         return None;
     };
     if enableValue == enable_false {
+        return Some(Vec::new());
+    }
+    /*
+    ** Determine whether it is enabled
+    */
+    let mut libnameEnableValue = String::new();
+    let le = match &attributes.libnameEnable {
+        Some(e) => e,
+        None => {
+            panic!("libnameEnable is not exist");
+        }
+    };
+    if let Err(err) = join(le, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut libnameEnableValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    if libnameEnableValue == enable_false {
         return Some(Vec::new());
     }
     /*
