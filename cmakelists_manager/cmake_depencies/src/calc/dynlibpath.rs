@@ -2,6 +2,7 @@ use crate::parse::{self, git_lib, joinv2::ParseMode, joinv2::ValueCode, joinv2::
 use crate::config;
 use crate::structs;
 use git_lib::ParamType;
+use path::pathconvert;
 
 use json::{JsonValue};
 use path_abs::PathAbs;
@@ -257,7 +258,7 @@ pub struct CResult {
     pub include: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -503,10 +504,12 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
                         match p.to_str() {
                             Some(s) => {
                                 if cfg!(target_os="windows"){
-                                    let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"/"#);
+                                    let t = pathconvert::abs2rel(cmakeDir, &t);
                                     r.libpath = Some(t);
                                 } else {
-                                    r.libpath = Some(s.to_string());
+                                    r.libpath = Some(pathconvert::abs2rel(cmakeDir, s));
                                 }
                             },
                             None => {
@@ -521,6 +524,8 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
             } else {
                 println!("[Info] libpathEnable is false");
             }
+            // if cfg!(target_os="windows") {
+            // }
         },
         ParamType::Include => {
             if includeEnableValue == enable_true {
@@ -529,10 +534,13 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, version: &str, l
                         match p.as_os_str().to_str() {
                             Some(s) => {
                                 if cfg!(target_os="windows"){
-                                    let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                    let t = s.trim_left_matches(r#"\\?\"#);
+                                    let t = pathconvert::abs2rel(cmakeDir, &t).replace("\\", r#"/"#);
                                     r.include = Some(t);
                                 } else {
-                                    r.include = Some(s.to_string());
+                                    // r.include = Some(s.to_string());
+                                    r.libpath = Some(pathconvert::abs2rel(cmakeDir, s));
                                 }
                             },
                             None => {

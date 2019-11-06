@@ -33,7 +33,7 @@ pub struct CDependSearcher {
 }
 
 impl CDependSearcher {
-    pub fn search<'a>(&self, root: &'a str, library: &git_librarys::CGitLibrarys, params: &Vec<git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &'a str> {
+    pub fn search<'a>(&self, root: &'a str, cmakeDir: &str, library: &git_librarys::CGitLibrarys, params: &Vec<git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &'a str> {
         let searchName = match &library.name {
             Some(n) => n,
             None => {
@@ -60,7 +60,7 @@ impl CDependSearcher {
                             return true;
                         }
                     };
-                    if let Err(_) = self.readLibConfig(root, path, library, params, results) {
+                    if let Err(_) = self.readLibConfig(root, path, cmakeDir, library, params, results) {
                         return true;
                     };
                     true
@@ -75,7 +75,7 @@ impl CDependSearcher {
                         return true;
                     }
                     // find lib.libraryconfig.toml
-                    if let Err(_) = self.readLibConfig(root, path, library, params, results) {
+                    if let Err(_) = self.readLibConfig(root, path, cmakeDir, library, params, results) {
                         return true;
                     };
                     true
@@ -84,7 +84,7 @@ impl CDependSearcher {
         })
     }
 
-    fn readLibConfig(&self, root: &str, path: &str, library: &git_librarys::CGitLibrarys, params: &Vec<parse::git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &str> {
+    fn readLibConfig(&self, root: &str, path: &str, cmakeDir: &str, library: &git_librarys::CGitLibrarys, params: &Vec<parse::git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &str> {
         let content = match fs::read(path) {
             Ok(f) => f,
             Err(err) => {
@@ -163,7 +163,7 @@ impl CDependSearcher {
                     ** Get the dependent library path
                     */
                     // println!("path: {}, parent: {}", path, parent);
-                    let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+                    let libpath = match calc::dynlibpath::get(param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
                         Some(l) => l,
                         None => {
                             println!("calc libpath error");
@@ -215,7 +215,7 @@ impl CDependSearcher {
                     };
                     */
                     // println!("############, {}", &path);
-                    let libpath = match calc::dynlibpath::get(param, parent, searchVersion, &libConfig.package, dependVersion) {
+                    let libpath = match calc::dynlibpath::get(param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
                         Some(l) => l,
                         None => {
                             println!("calc include error");
@@ -249,6 +249,7 @@ impl CDependSearcher {
                 /*
                 ** Sort depends on no field
                 */
+                /*
                 let mut ds = Vec::new();
                 for (key, value) in depends.iter() {
                     let r = match &value.root {
@@ -277,9 +278,22 @@ impl CDependSearcher {
                 quick_sort::sort(&mut ds);
                 // println!("{:?}", &ds);
                 for value in ds.iter() {
+                */
+                for value in depends.iter() {
                     // let mut p = param.clone();
                     // p.name = Some(key.to_string());
                     // p.version = Some(value.version.to_string());
+                    let r = match &value.root {
+                        Some(r) => {
+                            match parentPath.join(r).to_str() {
+                                Some(p) => p.to_string(),
+                                None => {
+                                    root.to_string()
+                                }
+                            }
+                        },
+                        None => root.to_string()
+                    };
                     let mut libs = Vec::new();
                     match &value.subs {
                         Some(subs) => {
@@ -304,20 +318,20 @@ impl CDependSearcher {
                     };
                     */
                     for paramMut in paramsClone.iter_mut() {
-                        if let Some(enable) = value.enable {
+                        if let Some(enable) = &value.enable {
                             (*paramMut).enable = Some(enable.to_string());
                         };
-                        if let Some(includeEnable) = value.includeEnable {
+                        if let Some(includeEnable) = &value.includeEnable {
                             (*paramMut).includeEnable = Some(includeEnable.to_string());
                         };
-                        if let Some(libpathEnable) = value.libpathEnable {
+                        if let Some(libpathEnable) = &value.libpathEnable {
                             (*paramMut).libpathEnable = Some(libpathEnable.to_string());
                         };
-                        if let Some(libnameEnable) = value.libnameEnable {
+                        if let Some(libnameEnable) = &value.libnameEnable {
                             (*paramMut).libnameEnable = Some(libnameEnable.to_string());
                         };
                     }
-                    if let Err(_) = self.search(&value.root, &git_librarys::CGitLibrarys{
+                    if let Err(_) = self.search(&r, cmakeDir, &git_librarys::CGitLibrarys{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
                         libs: libs

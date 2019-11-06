@@ -4,6 +4,8 @@ set(git_librarys
 
 INCLUDE_DIRECTORIES(
 	"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\include\\0.1.10"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\include\\0.1.0"
+"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\include\\1.0.0"
 
 )
 
@@ -67,10 +69,10 @@ SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES DEBUG_POSTFIX "_d")
 
 IF (${OS} STREQUAL "WINDOWS")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
-			debug test.0.1.10.64_d release test.0.1.10.64
-debug abc-0.1.0-abcd.m.1_d release abc-0.1.0-abcd.m.1
-debug def-0.1.0-abcd.m.1_d release def-0.1.0-abcd.m.1
-debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
+			debug test.0.1.10.64_d optimized test.0.1.10.64
+debug abc-0.1.0-abcd.m.1_d optimized abc-0.1.0-abcd.m.1
+debug def-0.1.0-abcd.m.1_d optimized def-0.1.0-abcd.m.1
+debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 
 		)
 		
@@ -88,9 +90,9 @@ debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
 ELSEIF (${OS} STREQUAL "LINUX")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
 						test.0.1.10.64-0.1.10
-debug abc-0.1.0-abcd.m.1_d release abc-0.1.0-abcd.m.1
-debug def-0.1.0-abcd.m.1_d release def-0.1.0-abcd.m.1
-debug openssl-1.0.0-abcd.m.1_d release openssl-1.0.0-abcd.m.1
+debug abc-0.1.0-abcd.m.1_d optimized abc-0.1.0-abcd.m.1
+debug def-0.1.0-abcd.m.1_d optimized def-0.1.0-abcd.m.1
+debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 
 		)
 

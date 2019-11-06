@@ -47,7 +47,7 @@ impl Default for ParamType {
 
 #[derive(Default, Debug, Clone)]
 pub struct CParam {
-    cbbStoreRoot: String,
+    pub cbbStoreRoot: String,
     pub paramType: ParamType,
     pub startIndex: usize,
     pub platform: Option<String>,

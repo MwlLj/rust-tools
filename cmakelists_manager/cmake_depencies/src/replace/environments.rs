@@ -20,10 +20,10 @@ const keyword_target_link_libraries: &str = "target_link_libraries";
 const keyword_link_directories: &str = "link_directories";
 const keyword_include_directories: &str = "include_directories";
 
-const keyword_cbb_store_root: &str = "${CBB_STORE_ROOT}";
-
 const cmake_keyword_debug: &str = "debug";
 const cmake_keyword_release: &str = "release";
+
+pub const keyword_cbb_store_root: &str = "${CBB_STORE_ROOT}";
 
 const cmakelist_name: &str = "CMakelists.txt";
 
@@ -38,12 +38,18 @@ enum Mode {
     GitLibrarys
 }
 
+pub struct CRepalce {
+    pub startIndex: usize,
+    pub value: String
+}
+
 struct CCall {
     content: String,
     writeStauts: WriteStatus,
     mode: Mode,
     gitLibrarys: Vec<git_librarys::CGitLibrarys>,
     libraryConfigs: Vec<git_lib::CParam>,
+    replaces: Vec<CRepalce>,
     cbbStoreRoot: String
 }
 
@@ -95,7 +101,12 @@ impl ICall for CCall {
                     self.libraryConfigs.push(param);
                 } else if (key.to_ascii_lowercase() == keyword_include_directories.to_ascii_lowercase())
                 && (value.starts_with(keyword_cbb_store_root)) {
-                    self.appendIncludeReplace(value);
+                    // self.appendIncludeReplace(value);
+                    self.removeContentRightLen(value.len() + 1);
+                    self.replaces.push(CRepalce{
+                        startIndex: self.content.len(),
+                        value: value.to_string()
+                    });
                 }
             },
             Mode::GitLibrarys => {
@@ -155,47 +166,6 @@ impl CCall {
         }
     }
 
-    fn appendIncludeReplace(&mut self, value: &str) {
-        let path = Path::new(&self.cbbStoreRoot);
-        let mut afterPath = value.trim_left_matches(keyword_cbb_store_root).to_string();
-        let bytes = afterPath.as_bytes();
-        if bytes.len() > 0 {
-            let c = bytes[0];
-            if c == b'/' || c == b'\\' {
-                afterPath.remove(0);
-            }
-        }
-        let path = path.join(&afterPath);
-        /*
-        ** Convert to absolute path
-        */
-        match path.canonicalize() {
-            Ok(p) => {
-                match p.to_str() {
-                    Some(s) => {
-                        if cfg!(target_os="windows"){
-                            let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                            self.removeContentRightLen(value.len() + 1);
-                            self.content.insert(self.content.len(), '"');
-                            self.content.insert_str(self.content.len(), &t);
-                            self.content.insert(self.content.len(), '"');
-                        } else {
-                            self.removeContentRightLen(value.len() + 1);
-                            self.content.insert_str(self.content.len(), s);
-                        }
-                    },
-                    None => {
-                        println!("[Error] include path abs to_str error");
-                    }
-                }
-            },
-            Err(err) => {
-                println!("[Error] include path, path: {}", &value);
-            }
-        }
-        // println!("{:?}, {}, {:?}", path.to_str(), afterPath, &self.path);
-    }
-
     fn starts_with(&self, content: &str, s: &str) -> bool {
         let mut word = String::new();
         for c in content.chars() {
@@ -245,6 +215,7 @@ impl CCall {
             mode: Mode::Normal,
             gitLibrarys: Vec::new(),
             libraryConfigs: Vec::new(),
+            replaces: Vec::new(),
             cbbStoreRoot: cbbStoreRoot.to_string()
         }
     }
@@ -255,7 +226,7 @@ pub struct CEnvironments {
 }
 
 impl CEnvironments {
-    pub fn parse(&self, path: &str, cbbStoreRoot: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, String), &str> {
+    pub fn parse(&self, path: &str, cbbStoreRoot: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, Vec<CRepalce>, String), &str> {
         let mut call = CCall::new(cbbStoreRoot);
         if let Err(err) = self.parser.parse(path, &mut call) {
             return Err(err);
@@ -282,7 +253,7 @@ impl CEnvironments {
             return Err("write error");
         };
         */
-        Ok((call.gitLibrarys, call.libraryConfigs, call.content))
+        Ok((call.gitLibrarys, call.libraryConfigs, call.replaces, call.content))
     }
 }
 

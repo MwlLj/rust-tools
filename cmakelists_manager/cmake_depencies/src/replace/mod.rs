@@ -5,6 +5,8 @@ use parse::git_lib;
 use search::dependencies::CDependSearcher;
 use search::dependencies::CSearchResult;
 use environments::CEnvironments;
+use environments::CRepalce;
+use path::pathconvert;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -20,14 +22,14 @@ pub struct CReplace {
 impl CReplace {
     pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str) -> Result<(), &str> {
         // self.search(root, content, librarys, params)
-        let (librarys, params, mut content) = match self.environmenter.parse(cmakePath, cbbStoreRoot) {
+        let (librarys, params, replaces, mut content) = match self.environmenter.parse(cmakePath, cbbStoreRoot) {
             Ok(r) => r,
             Err(err) => {
                 return Err("cmake parse error");
             }
         };
         // println!("{:?}", params);
-        self.search(cmakePath, root, &mut content, &librarys, &params);
+        self.search(cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces);
         Ok(())
     }
 }
@@ -57,13 +59,38 @@ impl<'a> std::cmp::Ord for CContent<'a> {
 }
 
 impl CReplace {
-    fn search(&self, path: &str, root: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>) {
+    fn search(&self, path: &str, root: &str, cbbStoreRoot: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>, replaces: &Vec<CRepalce>) {
         let mut contents: HashMap<usize, String> = HashMap::new();
         let mut libs: HashSet<String> = HashSet::new();
+        let p = Path::new(path);
+        let parent = match p.parent() {
+            Some(p) => p,
+            None => {
+                println!("get path parent path error");
+                return;
+            }
+        };
+        let cmakeDir = match parent.to_str() {
+            Some(dir) => dir,
+            None => {
+                panic!("cmake dir not exist, should not error");
+            }
+        };
+        for replace in replaces.iter() {
+            let s = self.pathReplace(&replace.value, cbbStoreRoot, cmakeDir);
+            match contents.get_mut(&replace.startIndex) {
+                Some(c) => {
+                    (*c).push_str(s.as_str());
+                },
+                None => {
+                    contents.insert(replace.startIndex, s);
+                }
+            }
+        }
         for library in librarys.iter() {
             let mut results: Vec<Vec<CSearchResult>> = Vec::new();
             let searcher = CDependSearcher::new();
-            if let Err(err) = searcher.search(&root, library, params, &mut results) {
+            if let Err(err) = searcher.search(&root, cmakeDir, library, params, &mut results) {
                 println!("[Error] search error, err: {}", err);
                 return;
             };
@@ -139,7 +166,7 @@ impl CReplace {
                                 }
                             }
                             */
-                        },
+                        }
                         _ => {}
                     }
                     match contents.get_mut(&item.startIndex) {
@@ -182,14 +209,6 @@ impl CReplace {
             indexStep += item.content.len();
         }
         // println!("{:?}", &content);
-        let p = Path::new(path);
-        let parent = match p.parent() {
-            Some(p) => p,
-            None => {
-                println!("get path parent path error");
-                return;
-            }
-        };
         let p = parent.join(cmakelist_name);
         /*
         ** Write file
@@ -199,6 +218,74 @@ impl CReplace {
             return;
         };
     }
+
+    fn pathReplace(&self, value: &str, cbbStoreRoot: &str, cmakeDir: &str) -> String {
+        let mut pathResult = String::new();
+        let path = Path::new(cbbStoreRoot);
+        let mut afterPath = value.trim_left_matches(environments::keyword_cbb_store_root).to_string();
+        let bytes = afterPath.as_bytes();
+        if bytes.len() > 0 {
+            let c = bytes[0];
+            if c == b'/' || c == b'\\' {
+                afterPath.remove(0);
+            }
+        }
+        let path = path.join(&afterPath);
+        /*
+        ** Convert to absolute path
+        */
+        match path.canonicalize() {
+            Ok(p) => {
+                match p.to_str() {
+                    Some(s) => {
+                        if cfg!(target_os="windows"){
+                            let t = s.trim_left_matches(r#"\\?\"#);
+                            let t = pathconvert::abs2rel(cmakeDir, &t).replace("\\", r#"/"#);
+                            pathResult.push('"');
+                            pathResult.push_str(&t);
+                            pathResult.push('"');
+                            // println!("{:?}", t);
+                        } else {
+                        }
+                    },
+                    None => {
+                        println!("[Error] include path abs to_str error");
+                    }
+                }
+            },
+            Err(err) => {
+                println!("[Error] include path, path: {}", &value);
+            }
+        }
+        /*
+        match path.canonicalize() {
+            Ok(p) => {
+                match p.to_str() {
+                    Some(s) => {
+                        if cfg!(target_os="windows"){
+                            let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                            pathResult.insert(self.content.len(), '"');
+                            pathResult.insert_str(self.content.len(), &t);
+                            pathResult.insert(self.content.len(), '"');
+                        } else {
+                            self.removeContentRightLen(value.len() + 1);
+                            pathResult.insert_str(self.content.len(), s);
+                        }
+                    },
+                    None => {
+                        println!("[Error] include path abs to_str error");
+                    }
+                }
+            },
+            Err(err) => {
+                println!("[Error] include path, path: {}", &value);
+            }
+        }
+        // println!("{:?}, {}, {:?}", path.to_str(), afterPath, &self.path);
+        */
+        pathResult
+    }
+
 
     fn updateIndex(&self, results: &mut Vec<Vec<CSearchResult>>, index: usize, len: usize) {
         for result in results.iter_mut() {

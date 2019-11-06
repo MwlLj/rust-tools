@@ -33,9 +33,11 @@ debug = "_d"
 release = ""
 rule = "$name-$version-$platform$d_r"
 
-[versions."1.0.0".dependencies]
+[versions."1.0.0"]
+dependencies = []
 
 # [version."0.1.10".dependencies.http_server]
 # version = '0.1.0'
 
-[versions."1.1.0".dependencies]
+[versions."1.1.0"]
+dependencies = []

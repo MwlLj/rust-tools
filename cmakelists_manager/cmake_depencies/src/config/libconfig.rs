@@ -50,20 +50,20 @@ impl CAttributes {
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct CLib {
+    pub name: String,
     pub version: String,
     pub enable: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
     pub libnameEnable: Option<String>,
     pub subs: Option<String>,
-    pub root: Option<String>,
-    pub no: u32
+    pub root: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct CVersion {
     pub attributes: Option<CAttributes>,
-    pub dependencies: Option<HashMap<String, CLib>>
+    pub dependencies: Option<Vec<CLib>>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
