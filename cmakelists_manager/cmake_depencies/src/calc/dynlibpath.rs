@@ -258,7 +258,7 @@ pub struct CResult {
     pub include: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
+pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -287,7 +287,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
             target_default
         }
     };
-    let enable = match &exeParam.enable {
+    let enable = match &library.enable {
         Some(e) => e,
         None => {
             enable_default
@@ -325,7 +325,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
             };
             let includeEnable = match &a.includeEnable {
                 Some(e) => {
-                    match &exeParam.includeEnable {
+                    match &library.includeEnable {
                         Some(en) => {
                             en
                         },
@@ -335,7 +335,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                     }
                 },
                 None => {
-                    match &exeParam.includeEnable {
+                    match &library.includeEnable {
                         Some(en) => {
                             en
                         },
@@ -347,7 +347,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
             };
             let libpathEnable = match &a.libpathEnable {
                 Some(e) => {
-                    match &exeParam.libpathEnable {
+                    match &library.libpathEnable {
                         Some(en) => {
                             en
                         },
@@ -357,7 +357,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                     }
                 },
                 None => {
-                    match &exeParam.libpathEnable {
+                    match &library.libpathEnable {
                         Some(en) => {
                             en
                         },
@@ -396,7 +396,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
             };
             let includeEnable = match &libPackage.includeEnable {
                 Some(e) => {
-                    match &exeParam.includeEnable {
+                    match &library.includeEnable {
                         Some(en) => {
                             en
                         },
@@ -406,7 +406,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                     }
                 },
                 None => {
-                    match &exeParam.includeEnable {
+                    match &library.includeEnable {
                         Some(en) => {
                             en
                         },
@@ -418,7 +418,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
             };
             let libpathEnable = match &libPackage.libpathEnable {
                 Some(e) => {
-                    match &exeParam.libpathEnable {
+                    match &library.libpathEnable {
                         Some(en) => {
                             en
                         },
@@ -428,7 +428,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                     }
                 },
                 None => {
-                    match &exeParam.libpathEnable {
+                    match &library.libpathEnable {
                         Some(en) => {
                             en
                         },
@@ -505,8 +505,9 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                             Some(s) => {
                                 if cfg!(target_os="windows"){
                                     // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"/"#);
-                                    let t = pathconvert::abs2rel(cmakeDir, &t);
+                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                                     r.libpath = Some(t);
                                 } else {
                                     r.libpath = Some(pathconvert::abs2rel(cmakeDir, s));
@@ -535,8 +536,9 @@ pub fn get(exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, 
                             Some(s) => {
                                 if cfg!(target_os="windows"){
                                     // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                    let t = s.trim_left_matches(r#"\\?\"#);
-                                    let t = pathconvert::abs2rel(cmakeDir, &t).replace("\\", r#"/"#);
+                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                                     r.include = Some(t);
                                 } else {
                                     // r.include = Some(s.to_string());

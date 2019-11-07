@@ -124,9 +124,6 @@ impl CReplace {
                                 }
                                 s.push_str("\n");
                             }
-                            if item.isSelf == "true" {
-                                println!("{:?}", &item.name);
-                            }
                         },
                         git_lib::ParamType::Include => {
                             for n in &item.name {
@@ -242,8 +239,9 @@ impl CReplace {
                 match p.to_str() {
                     Some(s) => {
                         if cfg!(target_os="windows"){
-                            let t = s.trim_left_matches(r#"\\?\"#);
-                            let t = pathconvert::abs2rel(cmakeDir, &t).replace("\\", r#"/"#);
+                            let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                            let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                            let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                             pathResult.push('"');
                             pathResult.push_str(&t);
                             pathResult.push('"');

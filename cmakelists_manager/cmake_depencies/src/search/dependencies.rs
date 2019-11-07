@@ -148,7 +148,7 @@ impl CDependSearcher {
             match param.paramType {
                 ParamType::LibName => {
                     // dynamic calc this version lib - full name
-                    let fullNames = match calc::dynlibname::get(param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
+                    let fullNames = match calc::dynlibname::get(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
                         Some(n) => n,
                         None => {
                             println!("calc full name error");
@@ -162,7 +162,7 @@ impl CDependSearcher {
                         startIndex: param.startIndex,
                         name: fullNames,
                         paramType: param.paramType.clone(),
-                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 ParamType::LibPath => {
@@ -170,7 +170,7 @@ impl CDependSearcher {
                     ** Get the dependent library path
                     */
                     // println!("path: {}, parent: {}", path, parent);
-                    let libpath = match calc::dynlibpath::get(param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
+                    let libpath = match calc::dynlibpath::get(library, param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
                         Some(l) => l,
                         None => {
                             println!("calc libpath error");
@@ -190,7 +190,7 @@ impl CDependSearcher {
                         startIndex: param.startIndex,
                         name: vec![libpath],
                         paramType: param.paramType.clone(),
-                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 ParamType::Include => {
@@ -223,7 +223,7 @@ impl CDependSearcher {
                     };
                     */
                     // println!("############, {}", &path);
-                    let libpath = match calc::dynlibpath::get(param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
+                    let libpath = match calc::dynlibpath::get(library, param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
                         Some(l) => l,
                         None => {
                             println!("calc include error");
@@ -242,7 +242,7 @@ impl CDependSearcher {
                         startIndex: param.startIndex,
                         name: vec![include.to_string()],
                         paramType: param.paramType.clone(),
-                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 _ => {
@@ -318,6 +318,7 @@ impl CDependSearcher {
                             libs.push(value.name.to_string());
                         }
                     }
+                    /*
                     let mut paramsClone = params.clone();
                     /*
                     if let Some(enable) = value.enable {
@@ -340,11 +341,33 @@ impl CDependSearcher {
                             (*paramMut).libnameEnable = Some(libnameEnable.to_string());
                         };
                     }
+                    */
+                    let mut enable = None;
+                    let mut includeEnable = None;
+                    let mut libpathEnable = None;
+                    let mut libnameEnable = None;
+                    if let Some(v) = &value.enable {
+                        enable = Some(v.to_string());
+                    };
+                    if let Some(v) = &value.includeEnable {
+                        includeEnable = Some(v.to_string());
+                    };
+                    if let Some(v) = &value.libpathEnable {
+                        libpathEnable = Some(v.to_string());
+                    };
+                    if let Some(v) = &value.libnameEnable {
+                        libnameEnable = Some(v.to_string());
+                    };
                     if let Err(_) = self.search(&r, cmakeDir, &git_librarys::CGitLibrarys{
                         name: Some(value.name.to_string()),
                         version: Some(value.version.to_string()),
-                        libs: libs
-                    }, &paramsClone, results) {
+                        libs: libs,
+                        enable: enable,
+                        includeEnable: includeEnable,
+                        libpathEnable: libpathEnable,
+                        libnameEnable: libnameEnable,
+                        isSelf: library.isSelf.clone()
+                    }, &params, results) {
                         return Err("search error");
                     };
                 }

@@ -233,7 +233,7 @@ pub struct CResult {
     pub dr: Option<String>
 }
 
-pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
+pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -262,7 +262,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             target_default
         }
     };
-    let enable = match &exeParam.enable {
+    let enable = match &library.enable {
         Some(t) => t,
         None => {
             enable_default
@@ -300,7 +300,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             };
             let libnameEnable = match &a.libnameEnable {
                 Some(e) => {
-                    match &exeParam.libnameEnable {
+                    match &library.libnameEnable {
                         Some(en) => {
                             en
                         },
@@ -310,7 +310,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                     }
                 },
                 None => {
-                    match &exeParam.libnameEnable {
+                    match &library.libnameEnable {
                         Some(en) => {
                             en
                         },
@@ -367,7 +367,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
             };
             let libnameEnable = match &libPackage.libnameEnable {
                 Some(e) => {
-                    match &exeParam.libnameEnable {
+                    match &library.libnameEnable {
                         Some(en) => {
                             en
                         },
@@ -377,7 +377,7 @@ pub fn get(exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>,
                     }
                 },
                 None => {
-                    match &exeParam.libnameEnable {
+                    match &library.libnameEnable {
                         Some(en) => {
                             en
                         },

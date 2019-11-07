@@ -3,33 +3,33 @@ set(git_librarys
 )
 
 INCLUDE_DIRECTORIES(
-	"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\include\\0.1.10"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\include\\0.1.0"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\include\\1.0.0"
+	"../lib_config/test/include/0.1.10/"
+"../lib_config/http_server/include/0.1.0/"
+"../lib_config/openssl/include/1.0.0/"
 
 )
 
 IF (${OS} STREQUAL "WINDOWS")
 	If (${FILE_PREFIX} STREQUAL "64")
 		LINK_DIRECTORIES (
-			"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\win64"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\win64"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\win64"
+			"../lib_config/test/lib/0.1.10/win64/"
+"../lib_config/http_server/lib/0.1.0/win64/"
+"../lib_config/openssl/lib/1.0.0/win64/"
 
 		)
 	ELSE()
 		LINK_DIRECTORIES (
-			"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\win32"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\win32"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\win32"
+			"../lib_config/test/lib/0.1.10/win32/"
+"../lib_config/http_server/lib/0.1.0/win32/"
+"../lib_config/openssl/lib/1.0.0/win32/"
 
 		)
 	ENDIF()
 ELSEIF (${OS} STREQUAL "LINUX")
 	LINK_DIRECTORIES (
-		"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\test\\lib\\0.1.10\\gnu64"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\http_server\\lib\\0.1.0\\gnu64"
-"D:\\liujun\\github\\rust-tools\\cmakelists_manager\\cmake_depencies\\doc\\lib_config\\openssl\\lib\\1.0.0\\gnu64"
+		"../lib_config/test/lib/0.1.10/gnu64/"
+"../lib_config/http_server/lib/0.1.0/gnu64/"
+"../lib_config/openssl/lib/1.0.0/gnu64/"
 
 	)
 ENDIF()
