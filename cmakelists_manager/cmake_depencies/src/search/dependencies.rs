@@ -16,6 +16,8 @@ use std::fs;
 const lib_config_file_name: &str = "LibraryConfig.toml";
 const lib_config_file_suffix: &str = "library.config.toml";
 
+const is_self_defult: &str = "false";
+
 #[derive(Debug, Default)]
 pub struct CResults {
     pub name: calc::dynlibname::CResult,
@@ -26,7 +28,11 @@ pub struct CResults {
 pub struct CSearchResult {
     pub startIndex: usize,
     pub name: Vec<String>,
-    pub paramType: git_lib::ParamType
+    pub paramType: git_lib::ParamType,
+    /*
+    ** Whether it is itself
+    */
+    pub isSelf: String
 }
 
 pub struct CDependSearcher {
@@ -155,7 +161,8 @@ impl CDependSearcher {
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
                         name: fullNames,
-                        paramType: param.paramType.clone()
+                        paramType: param.paramType.clone(),
+                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 ParamType::LibPath => {
@@ -182,7 +189,8 @@ impl CDependSearcher {
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
                         name: vec![libpath],
-                        paramType: param.paramType.clone()
+                        paramType: param.paramType.clone(),
+                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 ParamType::Include => {
@@ -233,7 +241,8 @@ impl CDependSearcher {
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
                         name: vec![include.to_string()],
-                        paramType: param.paramType.clone()
+                        paramType: param.paramType.clone(),
+                        isSelf: param.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
                 _ => {

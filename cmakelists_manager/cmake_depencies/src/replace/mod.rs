@@ -124,6 +124,9 @@ impl CReplace {
                                 }
                                 s.push_str("\n");
                             }
+                            if item.isSelf == "true" {
+                                println!("{:?}", &item.name);
+                            }
                         },
                         git_lib::ParamType::Include => {
                             for n in &item.name {
