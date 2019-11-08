@@ -256,16 +256,19 @@ impl CReplace {
             Ok(p) => {
                 match p.to_str() {
                     Some(s) => {
+                        let mut pt = String::new();
                         if cfg!(target_os="windows"){
                             let t = s.trim_left_matches(r#"\\?\"#);
                             let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
-                            let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
-                            pathResult.push('"');
-                            pathResult.push_str(&t);
-                            pathResult.push('"');
+                            pt = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                             // println!("{:?}", t);
                         } else {
+                            let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().to_string();
+                            pt = pathconvert::abs2rel(&c, s);
                         }
+                        pathResult.push('"');
+                        pathResult.push_str(&pt);
+                        pathResult.push('"');
                     },
                     None => {
                         println!("[Error] include path abs to_str error");

@@ -545,7 +545,8 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                                     r.include = Some(t);
                                 } else {
                                     // r.include = Some(s.to_string());
-                                    r.libpath = Some(pathconvert::abs2rel(cmakeDir, s));
+                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().to_string();
+                                    r.libpath = Some(pathconvert::abs2rel(&c, s));
                                 }
                             },
                             None => {
