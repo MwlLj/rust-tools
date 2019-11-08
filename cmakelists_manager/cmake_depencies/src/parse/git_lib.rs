@@ -28,7 +28,8 @@ pub enum ParamType {
     Unknow,
     LibName,
     LibPath,
-    Include
+    Include,
+    InstallLibPath
 }
 
 impl Default for ParamType {

@@ -17,6 +17,8 @@ const lib_config_file_name: &str = "LibraryConfig.toml";
 const lib_config_file_suffix: &str = "library.config.toml";
 
 const is_self_defult: &str = "false";
+const is_self_true: &str = "true";
+const is_self_false: &str = "false";
 
 #[derive(Debug, Default)]
 pub struct CResults {
@@ -165,7 +167,25 @@ impl CDependSearcher {
                         isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
-                ParamType::LibPath => {
+                ParamType::LibPath
+                | ParamType::InstallLibPath => {
+                    match param.paramType {
+                        ParamType::InstallLibPath => {
+                            match &library.isSelf {
+                                Some(is) => {
+                                    if is == is_self_false {
+                                        continue;
+                                    } else {
+                                        // println!("########, {:?}", param.paramType);
+                                    }
+                                },
+                                None => {
+                                    continue;
+                                }
+                            }
+                        },
+                        _ => {}
+                    }
                     /*
                     ** Get the dependent library path
                     */
@@ -366,7 +386,7 @@ impl CDependSearcher {
                         includeEnable: includeEnable,
                         libpathEnable: libpathEnable,
                         libnameEnable: libnameEnable,
-                        isSelf: library.isSelf.clone()
+                        isSelf: None
                     }, &params, results) {
                         return Err("search error");
                     };

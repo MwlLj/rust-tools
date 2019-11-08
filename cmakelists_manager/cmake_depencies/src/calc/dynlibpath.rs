@@ -497,7 +497,8 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     ** Get absolute path
     */
     match exeParam.paramType {
-        ParamType::LibPath => {
+        ParamType::LibPath
+        | ParamType::InstallLibPath => {
             if libpathEnableValue == enable_true {
                 match Path::new(&libpathValue).canonicalize() {
                     Ok(p) => {
@@ -505,8 +506,9 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                             Some(s) => {
                                 if cfg!(target_os="windows"){
                                     // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
-                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let t = s.trim_left_matches(r#"\\?\"#);
+                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
+                                    // println!("{}, {}", &c,&t);
                                     let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                                     r.libpath = Some(t);
                                 } else {
@@ -536,8 +538,8 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                             Some(s) => {
                                 if cfg!(target_os="windows"){
                                     // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                    let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
-                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                                    let t = s.trim_left_matches(r#"\\?\"#);
+                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
                                     let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                                     r.include = Some(t);
                                 } else {

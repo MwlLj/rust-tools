@@ -125,6 +125,15 @@ impl CReplace {
                                 s.push_str("\n");
                             }
                         },
+                        git_lib::ParamType::InstallLibPath => {
+                            if item.name.len() == 0 {
+                                continue;
+                            }
+                            let name = &item.name[0];
+                            let mut na = String::from("../");
+                            na.push_str(name);
+                            s.push_str(&na);
+                        },
                         git_lib::ParamType::Include => {
                             for n in &item.name {
                                 if n.len() == 0 {
@@ -239,8 +248,8 @@ impl CReplace {
                 match p.to_str() {
                     Some(s) => {
                         if cfg!(target_os="windows"){
-                            let t = s.trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
-                            let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).replace("\\", r#"\\"#);
+                            let t = s.trim_left_matches(r#"\\?\"#);
+                            let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
                             let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                             pathResult.push('"');
                             pathResult.push_str(&t);
