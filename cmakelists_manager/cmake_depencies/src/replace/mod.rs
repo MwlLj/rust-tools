@@ -111,12 +111,20 @@ impl CReplace {
                                 s.push_str("\n");
                             }
                         },
+                        git_lib::ParamType::TargetName => {
+                            if item.name.len() == 0 {
+                                continue;
+                            }
+                            let name = &item.name[0];
+                            s.push_str(name);
+                        },
                         git_lib::ParamType::LibPath => {
                             for n in &item.name {
                                 if n.len() == 0 {
                                     continue;
                                 }
                                 s.push('"');
+                                s.push_str("${CMAKE_CURRENT_SOURCE_DIR}/");
                                 s.push_str(n);
                                 s.push('"');
                                 if cfg!(target_os="windows") {
@@ -140,6 +148,7 @@ impl CReplace {
                                     continue;
                                 }
                                 s.push('"');
+                                s.push_str("${CMAKE_CURRENT_SOURCE_DIR}/");
                                 s.push_str(n);
                                 s.push('"');
                                 if cfg!(target_os="windows") {

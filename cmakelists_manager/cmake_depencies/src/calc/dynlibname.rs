@@ -233,6 +233,25 @@ pub struct CResult {
     pub dr: Option<String>
 }
 
+#[derive(Debug)]
+pub enum NameType {
+    Full,
+    Debug,
+    Release
+}
+
+impl Default for NameType {
+    fn default() -> Self {
+        NameType::Full
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct CNameResult {
+    pub name: String,
+    pub nameType: NameType
+}
+
 pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
     /*
     ** Determine the type of the extension field,
@@ -572,6 +591,20 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             result.push_str(" ");
             result.push_str(&releaseName);
         }
+        /*
+        results.push(CNameResult{
+            name: debugName.to_string(),
+            nameType: NameType::Debug
+        });
+        results.push(CNameResult{
+            name: releaseName.to_string(),
+            nameType: NameType::Release
+        });
+        results.push(CNameResult{
+            name: result.to_string(),
+            nameType: NameType::Full
+        });
+        */
         results.push(result);
     }
     Some(results)

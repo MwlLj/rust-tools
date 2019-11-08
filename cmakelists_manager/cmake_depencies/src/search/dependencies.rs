@@ -148,7 +148,25 @@ impl CDependSearcher {
         let mut rs = Vec::new();
         for param in params {
             match param.paramType {
-                ParamType::LibName => {
+                ParamType::LibName
+                | ParamType::TargetName => {
+                    match param.paramType {
+                        ParamType::TargetName => {
+                            match &library.isSelf {
+                                Some(is) => {
+                                    if is == is_self_false {
+                                        continue;
+                                    } else {
+                                        // println!("########, {:?}", param.paramType);
+                                    }
+                                },
+                                None => {
+                                    continue;
+                                }
+                            }
+                        },
+                        _ => {}
+                    }
                     // dynamic calc this version lib - full name
                     let fullNames = match calc::dynlibname::get(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
                         Some(n) => n,
