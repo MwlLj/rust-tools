@@ -46,7 +46,7 @@ impl ICall for CCall {
         match self.mode {
             Mode::Normal => {
                 if k == keyword_git_cmakes {
-                    println!("{:?}", &self.content);
+                    // println!("{:?}", &self.content);
                     self.popUtilEqualWord(key);
                     self.mode = Mode::GitCMakes;
                     self.writeStatus = WriteStatus::StopWrite;
@@ -89,7 +89,6 @@ impl ICall for CCall {
 
     fn on_k_end(&mut self, key: &str) {
         // println!("{:?}", self.content.len());
-        self.content.pop();
         match self.mode {
             Mode::GitCMakes => {
                 self.writeStatus = WriteStatus::StopWrite;
@@ -191,12 +190,12 @@ pub struct CMerge {
 
 impl CMerge {
     pub fn merge(&self, cmakePath: &str) -> Result<String, &str> {
-        let cmakeDir = Path::new(cmakePath).parent().unwrap().to_str().unwrap().to_string();
+        let cmakeDir = Path::new(cmakePath).parent().expect("cmakePath parent error").to_str().expect("cmakePath parent to_str error").to_string();
         let mut call = CCall::new(cmakeDir);
         if let Err(err) = self.parser.parse(cmakePath, &mut call) {
             return Err(err);
         };
-        println!("{:?}", &call.content);
+        // println!("{:?}", &call.content);
         return Ok(call.content)
     }
 }

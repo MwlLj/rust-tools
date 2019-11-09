@@ -244,9 +244,9 @@ pub struct CEnvironments {
 }
 
 impl CEnvironments {
-    pub fn parse(&self, path: &str, cbbStoreRoot: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, Vec<CRepalce>, String), &str> {
+    pub fn parse(&self, content: &Vec<u8>, cbbStoreRoot: &str) -> Result<(Vec<git_librarys::CGitLibrarys>, Vec<git_lib::CParam>, Vec<CRepalce>, String), &str> {
         let mut call = CCall::new(cbbStoreRoot);
-        if let Err(err) = self.parser.parse(path, &mut call) {
+        if let Err(err) = self.parser.parse_from_string(content, &mut call) {
             return Err(err);
         };
         // println!("{:?}", call.content);
@@ -290,7 +290,8 @@ mod test {
     #[ignore]
     fn environmentsTest() {
         let parser = CEnvironments::new();
-        parser.parse("./doc/exe_cmake/CMakeLists.config", "");
+        let content = fs::read("./doc/exe_cmake/CMakeLists.config").unwrap();
+        parser.parse(&content, "");
     }
 
     #[test]

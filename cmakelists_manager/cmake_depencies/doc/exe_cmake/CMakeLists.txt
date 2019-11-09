@@ -3,33 +3,33 @@ set(git_librarys
 )
 
 INCLUDE_DIRECTORIES(
-	"../lib_config/test/include/0.1.10/"
-"../lib_config/http_server/include/0.1.0/"
-"../lib_config/openssl/include/1.0.0/"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/test/include/0.1.10/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/http_server/include/0.1.0/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/openssl/include/1.0.0/"
 
 )
 
 IF (${OS} STREQUAL "WINDOWS")
 	If (${FILE_PREFIX} STREQUAL "64")
 		LINK_DIRECTORIES (
-			"../lib_config/test/lib/0.1.10/win64/"
-"../lib_config/http_server/lib/0.1.0/win64/"
-"../lib_config/openssl/lib/1.0.0/win64/"
+			"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/test/lib/0.1.10/win64/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/http_server/lib/0.1.0/win64/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/openssl/lib/1.0.0/win64/"
 
 		)
 	ELSE()
 		LINK_DIRECTORIES (
-			"../lib_config/test/lib/0.1.10/win32/"
-"../lib_config/http_server/lib/0.1.0/win32/"
-"../lib_config/openssl/lib/1.0.0/win32/"
+			"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/test/lib/0.1.10/win32/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/http_server/lib/0.1.0/win32/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/openssl/lib/1.0.0/win32/"
 
 		)
 	ENDIF()
 ELSEIF (${OS} STREQUAL "LINUX")
 	LINK_DIRECTORIES (
-		"../lib_config/test/lib/0.1.10/gnu64/"
-"../lib_config/http_server/lib/0.1.0/gnu64/"
-"../lib_config/openssl/lib/1.0.0/gnu64/"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/test/lib/0.1.10/gnu64/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/http_server/lib/0.1.0/gnu64/"
+"${CMAKE_CURRENT_SOURCE_DIR}/../lib_config/openssl/lib/1.0.0/gnu64/"
 
 	)
 ENDIF()
@@ -108,3 +108,9 @@ debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 			)
 		ENDIF()
 ENDIF()
+
+
+	hello
+
+	world
+

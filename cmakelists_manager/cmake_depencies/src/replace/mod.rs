@@ -5,6 +5,7 @@ use parse::git_librarys;
 use parse::git_lib;
 use search::dependencies::CDependSearcher;
 use search::dependencies::CSearchResult;
+use merge::CMerge;
 use environments::CEnvironments;
 use environments::CRepalce;
 use path::pathconvert;
@@ -23,7 +24,14 @@ pub struct CReplace {
 impl CReplace {
     pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str, searchFilter: &structs::param::CSearchFilter) -> Result<(), &str> {
         // self.search(root, content, librarys, params)
-        let (librarys, params, replaces, mut content) = match self.environmenter.parse(cmakePath, cbbStoreRoot) {
+        let merge = CMerge::new();
+        let c = match merge.merge(cmakePath) {
+            Ok(c) => c,
+            Err(err) => {
+                return Err("cmake merge error");
+            }
+        };
+        let (librarys, params, replaces, mut content) = match self.environmenter.parse(&c.as_bytes().to_vec(), cbbStoreRoot) {
             Ok(r) => r,
             Err(err) => {
                 return Err("cmake parse error");
@@ -260,7 +268,7 @@ impl CReplace {
                         let mut pt = String::new();
                         if cfg!(target_os="windows"){
                             let t = s.trim_left_matches(r#"\\?\"#);
-                            let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
+                            let c = Path::new(cmakeDir).canonicalize().expect("cmakeDir abs path error").to_str().expect("cmakeDir abs path to_str error").trim_left_matches(r#"\\?\"#).to_string();
                             pt = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
                             // println!("{:?}", t);
                         } else {

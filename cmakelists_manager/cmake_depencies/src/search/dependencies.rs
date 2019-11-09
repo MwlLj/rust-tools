@@ -50,6 +50,7 @@ impl<'b> CDependSearcher<'b> {
                 return Err("name field is not found");
             }
         };
+        // println!("{:?}", root);
         walk::scan::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::scan::Type| -> bool {
             match t {
                 walk::scan::Type::Dir => {
