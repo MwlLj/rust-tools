@@ -1,5 +1,6 @@
 use crate::parse;
 use crate::search;
+use crate::structs;
 use parse::git_librarys;
 use parse::git_lib;
 use search::dependencies::CDependSearcher;
@@ -20,7 +21,7 @@ pub struct CReplace {
 }
 
 impl CReplace {
-    pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str) -> Result<(), &str> {
+    pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str, searchFilter: &structs::param::CSearchFilter) -> Result<(), &str> {
         // self.search(root, content, librarys, params)
         let (librarys, params, replaces, mut content) = match self.environmenter.parse(cmakePath, cbbStoreRoot) {
             Ok(r) => r,
@@ -29,7 +30,7 @@ impl CReplace {
             }
         };
         // println!("{:?}", params);
-        self.search(cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces);
+        self.search(cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces, searchFilter);
         Ok(())
     }
 }
@@ -59,7 +60,7 @@ impl<'a> std::cmp::Ord for CContent<'a> {
 }
 
 impl CReplace {
-    fn search(&self, path: &str, root: &str, cbbStoreRoot: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>, replaces: &Vec<CRepalce>) {
+    fn search(&self, path: &str, root: &str, cbbStoreRoot: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>, replaces: &Vec<CRepalce>, searchFilter: &structs::param::CSearchFilter) {
         let mut contents: HashMap<usize, String> = HashMap::new();
         let mut libs: HashSet<String> = HashSet::new();
         let p = Path::new(path);
@@ -89,7 +90,7 @@ impl CReplace {
         }
         for library in librarys.iter() {
             let mut results: Vec<Vec<CSearchResult>> = Vec::new();
-            let searcher = CDependSearcher::new();
+            let searcher = CDependSearcher::new(searchFilter);
             if let Err(err) = searcher.search(&root, cmakeDir, library, params, &mut results) {
                 println!("[Error] search error, err: {}", err);
                 return;

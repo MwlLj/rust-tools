@@ -37,10 +37,11 @@ pub struct CSearchResult {
     pub isSelf: String
 }
 
-pub struct CDependSearcher {
+pub struct CDependSearcher<'b> {
+    searchFilter: &'b cratestructs::param::CSearchFilter
 }
 
-impl CDependSearcher {
+impl<'b> CDependSearcher<'b> {
     pub fn search<'a>(&self, root: &'a str, cmakeDir: &str, library: &git_librarys::CGitLibrarys, params: &Vec<git_lib::CParam>, results: &mut Vec<Vec<CSearchResult>>) -> Result<(), &'a str> {
         let searchName = match &library.name {
             Some(n) => n,
@@ -49,9 +50,10 @@ impl CDependSearcher {
                 return Err("name field is not found");
             }
         };
-        walk::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::Type| -> bool {
+        walk::scan::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::scan::Type| -> bool {
             match t {
-                walk::Type::Dir => {
+                walk::scan::Type::Dir => {
+                    // println!("{:?}", path);
                     // dir
                     if name != searchName {
                         return true;
@@ -71,9 +73,9 @@ impl CDependSearcher {
                     if let Err(_) = self.readLibConfig(root, path, cmakeDir, library, params, results) {
                         return true;
                     };
-                    true
+                    false
                 },
-                walk::Type::File => {
+                walk::scan::Type::File => {
                     // file
                     let mut n = String::new();
                     n.push_str(searchName);
@@ -86,6 +88,18 @@ impl CDependSearcher {
                     if let Err(_) = self.readLibConfig(root, path, cmakeDir, library, params, results) {
                         return true;
                     };
+                    true
+                },
+                walk::scan::Type::OnceEnd => {
+                    match &self.searchFilter.parentPathIsnotIncluded {
+                        Some(parents) => {
+                            if parents.contains(&name.to_string()) {
+                                return false;
+                            }
+                        },
+                        None => {
+                        }
+                    }
                     true
                 }
             }
@@ -615,9 +629,11 @@ impl CDependSearcher {
 }
 */
 
-impl CDependSearcher {
-    pub fn new() -> CDependSearcher {
-        CDependSearcher{}
+impl<'b> CDependSearcher<'b> {
+    pub fn new(searchFilter: &'b cratestructs::param::CSearchFilter) -> CDependSearcher {
+        CDependSearcher{
+            searchFilter: searchFilter
+        }
     }
 }
 
@@ -631,7 +647,7 @@ mod test {
             name: Some("test".to_string()),
             version: Some("0.1.10".to_string())
         };
-        let searcher = CDependSearcher::new();
+        let searcher = CDependSearcher::new(&cratestructs::param::CSearchFilter::default());
         /*
         searcher.search1(&cratestructs::param::CRunArgs{
         }, ".", &parse::git_lib::CGitLib{
