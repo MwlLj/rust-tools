@@ -287,16 +287,16 @@ impl CEnvironments {
 mod test {
     use super::*;
     #[test]
-    // #[ignore]
+    #[ignore]
     fn environmentsTest() {
         let parser = CEnvironments::new();
-        parser.parse("./doc/exe_cmake/CMakeLists.config");
+        parser.parse("./doc/exe_cmake/CMakeLists.config", "");
     }
 
     #[test]
     #[ignore]
     fn callStartWithTest() {
-        let call = CCall::new();
+        let call = CCall::new("");
         println!("{}", call.starts_with(" git_lib {}", "git_lib"));
         println!("{}", call.starts_with("git_libpath {}", "git_libpath"));
     }

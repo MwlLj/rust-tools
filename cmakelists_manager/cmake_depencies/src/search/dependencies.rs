@@ -645,7 +645,13 @@ mod test {
     fn dependSearcherTest() {
         let librarys = parse::git_librarys::CGitLibrarys{
             name: Some("test".to_string()),
-            version: Some("0.1.10".to_string())
+            version: Some("0.1.10".to_string()),
+            libs: Vec::new(),
+            enable: None,
+            includeEnable: None,
+            libpathEnable: None,
+            libnameEnable: None,
+            isSelf: None
         };
         let searcher = CDependSearcher::new(&cratestructs::param::CSearchFilter::default());
         /*

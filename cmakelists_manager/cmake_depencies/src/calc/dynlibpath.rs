@@ -600,7 +600,7 @@ mod test {
             _
         }
         "`
-			"#, ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+			"#, ".", "1.0.0", "", "", &None, &mut extraJson, &mut extraJsonClone, &mut result);
         println!("{:?}", result);
 	}
 
@@ -623,7 +623,7 @@ mod test {
         };
         let mut extraJsonClone = extraJson.clone();
         let mut result = String::new();
-        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'extra.objs[1]'`", ".", "1.0.0", "", "", &mut extraJson, &mut extraJsonClone, &mut result);
+        join("abcd.`json:'extra.name'`.`json:'extra.objs[0]'`.`json:'extra.objs[1]'`", ".", "1.0.0", "", "", &None, &mut extraJson, &mut extraJsonClone, &mut result);
         println!("{:?}", result);
     }
 }

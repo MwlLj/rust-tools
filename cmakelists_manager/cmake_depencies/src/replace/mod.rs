@@ -338,9 +338,12 @@ mod test {
     #[ignore]
     fn replaceTest() {
         let replacer = CReplace::new();
-        replacer.replace("./doc/exe_cmake/CMakeLists.config", ".", ".");
+        replacer.replace("./doc/exe_cmake/CMakeLists.config", ".", ".", &structs::param::CSearchFilter{
+            parentPathIsnotIncluded: None
+        });
     }
 }
 
 // pub mod cmake;
 pub mod environments;
+pub mod merge;
