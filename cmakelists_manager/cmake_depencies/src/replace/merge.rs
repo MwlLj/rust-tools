@@ -17,7 +17,8 @@ enum Mode {
 
 enum WriteStatus {
     Write,
-    StopWrite
+    KStartStopWrite,
+    KEndStopWrite
 }
 
 struct CCall {
@@ -49,7 +50,7 @@ impl ICall for CCall {
                     // println!("{:?}", &self.content);
                     self.popUtilEqualWord(key);
                     self.mode = Mode::GitCMakes;
-                    self.writeStatus = WriteStatus::StopWrite;
+                    self.writeStatus = WriteStatus::KStartStopWrite;
                 }
             },
             Mode::GitCMakes => {
@@ -91,12 +92,12 @@ impl ICall for CCall {
         // println!("{:?}", self.content.len());
         match self.mode {
             Mode::GitCMakes => {
-                self.writeStatus = WriteStatus::StopWrite;
+                self.writeStatus = WriteStatus::KEndStopWrite;
             },
             _ => {
+                self.mode = Mode::Normal;
             }
         }
-        self.mode = Mode::Normal;
     }
 
     fn on_ch(&mut self, c: char) {
@@ -104,10 +105,21 @@ impl ICall for CCall {
             WriteStatus::Write => {
                 self.content.push(c);
             },
-            WriteStatus::StopWrite => {
+            WriteStatus::KStartStopWrite => {
                 match self.mode {
                     Mode::GitCMakes => {
                         self.writeStatus = WriteStatus::Write;
+                        // self.mode = Mode::Normal;
+                    },
+                    _ => {
+                    }
+                }
+            },
+            WriteStatus::KEndStopWrite => {
+                match self.mode {
+                    Mode::GitCMakes => {
+                        self.writeStatus = WriteStatus::Write;
+                        self.mode = Mode::Normal;
                     },
                     _ => {
                     }
@@ -119,7 +131,7 @@ impl ICall for CCall {
     fn on_double_quotes_start(&mut self) {
         match self.mode {
             Mode::GitCMakes => {
-                self.writeStatus = WriteStatus::StopWrite;
+                self.writeStatus = WriteStatus::KStartStopWrite;
             },
             _ => {
             }
@@ -129,7 +141,7 @@ impl ICall for CCall {
     fn on_double_quotes_end(&mut self) {
         match self.mode {
             Mode::GitCMakes => {
-                self.writeStatus = WriteStatus::StopWrite;
+                self.writeStatus = WriteStatus::KStartStopWrite;
             },
             _ => {
             }
