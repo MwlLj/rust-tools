@@ -34,3 +34,6 @@ version = "0.5"
 
 [dependencies.rust_parse]
 git = "https://github.com/MwlLj/rust_parse"
+
+[dependencies.serde_json]
+version = "1.0"

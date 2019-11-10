@@ -164,9 +164,11 @@ impl<'b> CDependSearcher<'b> {
         for param in params {
             match param.paramType {
                 ParamType::LibName
-                | ParamType::TargetName => {
+                | ParamType::DebugTargetName
+                | ParamType::ReleaseTargetName => {
                     match param.paramType {
-                        ParamType::TargetName => {
+                        ParamType::DebugTargetName
+                        | ParamType::ReleaseTargetName => {
                             match &library.isSelf {
                                 Some(is) => {
                                     if is == is_self_false {
@@ -183,19 +185,19 @@ impl<'b> CDependSearcher<'b> {
                         _ => {}
                     }
                     // dynamic calc this version lib - full name
-                    let fullNames = match calc::dynlibname::get(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
+                    let names = match calc::dynlibname::get(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
                         Some(n) => n,
                         None => {
                             println!("calc full name error");
                             return Err("calc full name error");
                         }
                     };
-                    if fullNames.len() == 0 {
+                    if names.len() == 0 {
                         continue;
                     }
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: fullNames,
+                        name: names,
                         paramType: param.paramType.clone(),
                         isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });

@@ -1,6 +1,7 @@
 use crate::parse;
 use crate::search;
 use crate::structs;
+use crate::calc;
 use parse::git_librarys;
 use parse::git_lib;
 use search::dependencies::CDependSearcher;
@@ -9,6 +10,7 @@ use merge::CMerge;
 use environments::CEnvironments;
 use environments::CRepalce;
 use path::pathconvert;
+use calc::dynlibname;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -113,19 +115,29 @@ impl CReplace {
                                 if n.len() == 0 {
                                     continue;
                                 }
-                                s.push_str(n);
+                                let nameResult: dynlibname::CNameResult = serde_json::from_str(n).expect("CNameResult from_str error => replace/mode.rs");
+                                s.push_str(&nameResult.fullName);
                                 if cfg!(target_os="windows") {
                                     s.push_str("\r");
                                 }
                                 s.push_str("\n");
                             }
                         },
-                        git_lib::ParamType::TargetName => {
+                        git_lib::ParamType::DebugTargetName => {
                             if item.name.len() == 0 {
                                 continue;
                             }
                             let name = &item.name[0];
-                            s.push_str(name);
+                            let nameResult: dynlibname::CNameResult = serde_json::from_str(name).expect("CNameResult from_str error => replace/mode.rs");
+                            s.push_str(&nameResult.debugName);
+                        },
+                        git_lib::ParamType::ReleaseTargetName => {
+                            if item.name.len() == 0 {
+                                continue;
+                            }
+                            let name = &item.name[0];
+                            let nameResult: dynlibname::CNameResult = serde_json::from_str(name).expect("CNameResult from_str error => replace/mode.rs");
+                            s.push_str(&nameResult.releaseName);
                         },
                         git_lib::ParamType::LibPath => {
                             for n in &item.name {

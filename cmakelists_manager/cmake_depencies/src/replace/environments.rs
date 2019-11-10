@@ -14,7 +14,8 @@ const keyword_git_include: &str = "git_include";
 const keyword_git_lib: &str = "git_lib";
 const keyword_git_libpath: &str = "git_libpath";
 const keyword_git_install_libpath: &str = "git_install_libpath";
-const keyword_git_target_name: &str = "git_target_name";
+const keyword_git_debug_target_name: &str = "git_debug_target_name";
+const keyword_git_release_target_name: &str = "git_release_target_name";
 const keyword_git_librarys: &str = "git_librarys";
 const keyword_set: &str = "set";
 
@@ -109,12 +110,20 @@ impl ICall for CCall {
                     param.paramType = ParamType::InstallLibPath;
                     param.startIndex = self.content.len();
                     self.libraryConfigs.push(param);
-                } else if self.starts_with(&v, keyword_git_target_name) {
+                } else if self.starts_with(&v, keyword_git_debug_target_name) {
                     self.removeContentRightLen(value.len() + 1);
                     // println!("{}, {:?}, {}, {}", self.content.len(), &v, keyword_git_libpath, &self.content);
                     let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
-                    param.paramType = ParamType::TargetName;
+                    param.paramType = ParamType::DebugTargetName;
+                    param.startIndex = self.content.len();
+                    self.libraryConfigs.push(param);
+                } else if self.starts_with(&v, keyword_git_release_target_name) {
+                    self.removeContentRightLen(value.len() + 1);
+                    // println!("{}, {:?}, {}, {}", self.content.len(), &v, keyword_git_libpath, &self.content);
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
+                    let mut param = parser.parseFromStr(&value);
+                    param.paramType = ParamType::ReleaseTargetName;
                     param.startIndex = self.content.len();
                     self.libraryConfigs.push(param);
                 } else if (key.to_ascii_lowercase() == keyword_include_directories.to_ascii_lowercase())

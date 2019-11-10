@@ -2,6 +2,7 @@ use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueErro
 use crate::config;
 
 use json::{JsonValue};
+use serde_derive::{Serialize, Deserialize};
 
 use std::collections::HashMap;
 
@@ -246,10 +247,11 @@ impl Default for NameType {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct CNameResult {
-    pub name: String,
-    pub nameType: NameType
+    pub fullName: String,
+    pub debugName: String,
+    pub releaseName: String
 }
 
 pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
@@ -545,7 +547,6 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     for lib in libs {
         let mut debugName = String::new();
         let mut releaseName = String::new();
-        let mut result = String::new();
         parse::rule::parse(ru, &mut |t: &str, valueType: parse::rule::ValueType| {
             match valueType {
                 parse::rule::ValueType::Var => {
@@ -578,34 +579,26 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 }
             }
         });
+        let mut fullName = String::new();
         if debugName == releaseName {
-            result = releaseName;
+            fullName = releaseName.clone();
         } else {
             // debug
-            result.push_str(cmake_keyword_debug);
-            result.push_str(" ");
-            result.push_str(&debugName);
-            result.push_str(" ");
+            fullName.push_str(cmake_keyword_debug);
+            fullName.push_str(" ");
+            fullName.push_str(&debugName);
+            fullName.push_str(" ");
             // release
-            result.push_str(cmake_keyword_release);
-            result.push_str(" ");
-            result.push_str(&releaseName);
+            fullName.push_str(cmake_keyword_release);
+            fullName.push_str(" ");
+            fullName.push_str(&releaseName);
         }
-        /*
-        results.push(CNameResult{
-            name: debugName.to_string(),
-            nameType: NameType::Debug
-        });
-        results.push(CNameResult{
-            name: releaseName.to_string(),
-            nameType: NameType::Release
-        });
-        results.push(CNameResult{
-            name: result.to_string(),
-            nameType: NameType::Full
-        });
-        */
-        results.push(result);
+        let s = serde_json::to_string(&CNameResult{
+            fullName: fullName,
+            debugName: debugName,
+            releaseName: releaseName
+        }).expect("serde_json CNameResult to_string error");
+        results.push(s);
     }
     Some(results)
 }

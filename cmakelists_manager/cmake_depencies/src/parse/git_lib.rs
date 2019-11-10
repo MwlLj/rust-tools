@@ -30,7 +30,8 @@ pub enum ParamType {
     LibPath,
     Include,
     InstallLibPath,
-    TargetName
+    DebugTargetName,
+    ReleaseTargetName
 }
 
 impl Default for ParamType {
