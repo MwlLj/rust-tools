@@ -358,19 +358,13 @@ impl<'b> CDependSearcher<'b> {
                         },
                         None => root.to_string()
                     };
-                    let mut libs = Vec::new();
+                    let mut libs = String::new();
                     match &value.subs {
                         Some(subs) => {
-                            if subs.trim() == git_librarys::subs_null {
-                            } else {
-                                let vs: Vec<&str> = subs.split(git_librarys::subs_sp).collect();
-                                for v in vs {
-                                    libs.push(v.trim().to_string());
-                                }
-                            }
+                            libs = subs.to_string();
                         },
                         None => {
-                            libs.push(value.name.to_string());
+                            libs = value.name.to_string();
                         }
                     }
                     /*

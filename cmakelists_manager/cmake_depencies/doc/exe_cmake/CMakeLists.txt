@@ -34,7 +34,17 @@ ELSEIF (${OS} STREQUAL "LINUX")
 	)
 ENDIF()
 
-SET(TARGET_NAME iotas_acd_hk${FILE_PREFIX})
+IF (${OS} STREQUAL "WINDOWS")
+	If (${FILE_PREFIX} STREQUAL "64")
+		IF (NOT DEFINED CMAKE_DEBUG_POSTFIX)
+			SET(TARGET_NAME )
+		ELSE()
+		ENDIF()
+	ELSE()
+	ENDIF()
+ELSEIF (${OS} STREQUAL "LINUX")
+ENDIF()
+
 
 SET(TARGET_INSTALL_DIR "${INSTALL_BIN_DIR}/service/iotas_acd_hk")
 
@@ -71,7 +81,7 @@ IF (${OS} STREQUAL "WINDOWS")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
 			debug test.0.1.10.64_d optimized test.0.1.10.64
 debug abc-0.1.0-abcd.m.1_d optimized abc-0.1.0-abcd.m.1
-debug def-0.1.0-abcd.m.1_d optimized def-0.1.0-abcd.m.1
+debug def.0.1.0-0.1.0-abcd.m.1_d optimized def.0.1.0-0.1.0-abcd.m.1
 debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 
 		)
@@ -90,8 +100,8 @@ debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 ELSEIF (${OS} STREQUAL "LINUX")
 		TARGET_LINK_LIBRARIES(${TARGET_NAME}
 						test.0.1.10.64-0.1.10
-debug abc-0.1.0-abcd.m.1_d optimized abc-0.1.0-abcd.m.1
-debug def-0.1.0-abcd.m.1_d optimized def-0.1.0-abcd.m.1
+debug a123-0.1.0-abcd.m.1_d optimized a123-0.1.0-abcd.m.1
+debug b456-0.1.0-abcd.m.1_d optimized b456-0.1.0-abcd.m.1
 debug openssl-1.0.0-abcd.m.1_d optimized openssl-1.0.0-abcd.m.1
 
 		)
@@ -113,4 +123,5 @@ ENDIF()
 	hello
 
 	world
+
 

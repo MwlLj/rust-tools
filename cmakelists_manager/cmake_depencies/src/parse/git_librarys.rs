@@ -19,7 +19,7 @@ pub const subs_null: &str = "_";
 pub struct CGitLibrarys {
     pub name: Option<String>,
     pub version: Option<String>,
-    pub libs: Vec<String>,
+    pub libs: String,
     pub enable: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
@@ -31,10 +31,12 @@ impl object::IObject for CGitLibrarys {
     fn on_kv(&mut self, key: &str, value: &str) {
         if key == keyword_name {
             self.name = Some(value.to_string());
-            self.libs = vec![value.to_string()];
+            // self.libs = vec![value.to_string()];
+            self.libs = value.to_string();
         } else if key == keyword_version {
             self.version = Some(value.to_string());
         } else if key == keyword_subs {
+            /*
             self.libs = Vec::new();
             if value.trim() == subs_null {
                 return;
@@ -43,6 +45,11 @@ impl object::IObject for CGitLibrarys {
             for v in vs {
                 self.libs.push(v.trim().to_string());
             }
+            */
+            if value.trim() == subs_null {
+                return;
+            }
+            self.libs = value.to_string();
         } else if key == keyword_enable {
             self.enable = Some(value.to_string());
         } else if key == keyword_include_enable {

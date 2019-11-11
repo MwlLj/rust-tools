@@ -1,4 +1,4 @@
-use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
+use crate::parse::{self, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError, git_librarys};
 use crate::config;
 
 use json::{JsonValue};
@@ -254,7 +254,7 @@ pub struct CNameResult {
     pub releaseName: String
 }
 
-pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &Vec<String>, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
+pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -519,6 +519,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
+    let mut subsValue = String::new();
+    if let Err(err) = join(libs, version, platform, target, &mut extraJson, &mut extraJsonClone, &mut subsValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
     let mut maps = HashMap::new();
     match &attributes.map {
         Some(m) => {
@@ -544,7 +549,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
         }
     };
     let mut results = Vec::new();
-    for lib in libs {
+    let mut ls = Vec::new();
+    let vs: Vec<&str> = subsValue.split(git_librarys::subs_sp).collect();
+    for v in vs {
+        ls.push(v.trim().to_string());
+    }
+    for lib in &ls {
         let mut debugName = String::new();
         let mut releaseName = String::new();
         parse::rule::parse(ru, &mut |t: &str, valueType: parse::rule::ValueType| {

@@ -96,7 +96,18 @@ my_version = """
 
 [versions."0.1.10"]
 dependencies = [
-    {name = "http_server", version = "0.1.0", root = "..", subs = "abc,def"}
+    {name = "http_server", version = "0.1.0", root = "..", subs = """
+    `judge:"
+        if var:'target' == str:'win64' {
+            abc,def.`var:'version'`
+        } elseif var:'target' == str:'win32' {
+            abc,def
+        } elseif var:'target' == str:'gnu64' {
+            a123,b456
+        } else {
+            a123,b456
+        }
+    "`"""}
 ]
 
 [versions."0.1.11"]
