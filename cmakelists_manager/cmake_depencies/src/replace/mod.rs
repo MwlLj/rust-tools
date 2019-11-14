@@ -6,6 +6,7 @@ use parse::git_librarys;
 use parse::git_lib;
 use search::dependencies::CDependSearcher;
 use search::dependencies::CSearchResult;
+use search::dependencies::{is_self_false, is_self_true};
 use merge::CMerge;
 use environments::CEnvironments;
 use environments::CRepalce;
@@ -111,6 +112,9 @@ impl CReplace {
                     let mut s = String::new();
                     match &item.paramType {
                         git_lib::ParamType::LibName => {
+                            if item.isSelf == is_self_true {
+                                continue;
+                            }
                             for n in &item.name {
                                 if n.len() == 0 {
                                     continue;

@@ -16,9 +16,9 @@ use std::fs;
 const lib_config_file_name: &str = "LibraryConfig.toml";
 const lib_config_file_suffix: &str = "library.config.toml";
 
-const is_self_defult: &str = "false";
-const is_self_true: &str = "true";
-const is_self_false: &str = "false";
+pub const is_self_defult: &str = "false";
+pub const is_self_true: &str = "true";
+pub const is_self_false: &str = "false";
 
 #[derive(Debug, Default)]
 pub struct CResults {
