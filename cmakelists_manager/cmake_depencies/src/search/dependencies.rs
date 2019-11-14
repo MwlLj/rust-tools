@@ -643,7 +643,7 @@ mod test {
         let librarys = parse::git_librarys::CGitLibrarys{
             name: Some("test".to_string()),
             version: Some("0.1.10".to_string()),
-            libs: Vec::new(),
+            libs: String::new(),
             enable: None,
             includeEnable: None,
             libpathEnable: None,

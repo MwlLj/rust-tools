@@ -45,6 +45,7 @@ impl CRuleParser {
                         wordMode = WordMode::Str;
                     } else {
                         word.push(c);
+                        f.on_value(&c.to_string(), ValueType::Char);
                     }
                 },
                 WordMode::Dollar => {
@@ -153,7 +154,8 @@ mod test {
     fn ruleParserTest() {
         let parser = CRuleParser::new();
         let mut rule = CRule{};
-        parser.parse("--$name-.-$version-$platform.$d_r..$d_r..", &mut rule);
+        // parser.parse("--$name-.-$version-$platform.$d_r..$d_r..", &mut rule);
         // parser.parse("$name$version$platform$d_r", &mut rule);
+        parser.parse("anywhere_net64$d_r", &mut rule);
     }
 }
