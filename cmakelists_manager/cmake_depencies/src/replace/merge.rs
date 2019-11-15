@@ -3,6 +3,7 @@
 */
 use cmakelists_parse::parser::grammar::{CGrammar, ICall};
 use path::walk;
+use super::var_replace::CVarReplace;
 
 use std::path::Path;
 use std::fs;
@@ -89,7 +90,7 @@ impl ICall for CCall {
                         match String::from_utf8(c) {
                             Ok(s) => {
                                 // println!("{:?}", &self.vars);
-                                self.content.push_str(&s);
+                                self.content.push_str(&self.varReplace(&s));
                                 if cfg!(target_os="windows") {
                                     self.content.push('\r');
                                 }
@@ -183,6 +184,11 @@ impl ICall for CCall {
 }
 
 impl CCall {
+    fn varReplace(&self, content: &str) -> String {
+        let replacer = CVarReplace::new();
+        replacer.replace(content, &self.vars)
+    }
+
     fn popUtilEqualWord(&mut self, word: &str) {
         let mut buffer = String::new();
         loop {

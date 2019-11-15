@@ -389,3 +389,4 @@ mod test {
 // pub mod cmake;
 pub mod environments;
 pub mod merge;
+pub mod var_replace;
