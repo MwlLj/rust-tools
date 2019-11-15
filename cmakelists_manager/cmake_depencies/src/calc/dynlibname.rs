@@ -396,6 +396,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
                 libpathRule: None,
+                binpathRule: None,
                 includeRule: None,
                 map: a.map.clone()
             }
@@ -463,6 +464,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
                 libpathRule: None,
+                binpathRule: None,
                 includeRule: None,
                 map: libPackage.map.clone()
             }

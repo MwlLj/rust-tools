@@ -20,6 +20,8 @@ use std::path::Path;
 
 const cmakelist_name: &str = "CMakeLists.txt";
 
+const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
+
 pub struct CReplace {
     environmenter: CEnvironments
 }
@@ -166,6 +168,22 @@ impl CReplace {
                             let mut na = String::from("../");
                             na.push_str(name);
                             s.push_str(&na);
+                        },
+                        git_lib::ParamType::InstallBinPath => {
+                            if item.isSelf != is_self_true {
+                                continue;
+                            }
+                            if item.name.len() == 0 {
+                                continue;
+                            }
+                            let name = &item.name[0];
+                            if name.len() == 0 {
+                                s.push_str(bin_dir_default);
+                            } else {
+                                let mut na = String::from("../");
+                                na.push_str(name);
+                                s.push_str(&na);
+                            }
                         },
                         git_lib::ParamType::Include => {
                             for n in &item.name {

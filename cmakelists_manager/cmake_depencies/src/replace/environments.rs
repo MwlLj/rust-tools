@@ -14,6 +14,7 @@ const keyword_git_include: &str = "git_include";
 const keyword_git_lib: &str = "git_lib";
 const keyword_git_libpath: &str = "git_libpath";
 const keyword_git_install_libpath: &str = "git_install_libpath";
+const keyword_git_install_binpath: &str = "git_install_binpath";
 const keyword_git_debug_target_name: &str = "git_debug_target_name";
 const keyword_git_release_target_name: &str = "git_release_target_name";
 const keyword_git_librarys: &str = "git_librarys";
@@ -108,6 +109,13 @@ impl ICall for CCall {
                     let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
                     param.paramType = ParamType::InstallLibPath;
+                    param.startIndex = self.content.len();
+                    self.libraryConfigs.push(param);
+                } else if self.starts_with(&v, keyword_git_install_binpath) {
+                    self.removeContentRightLen(value.len() + 1);
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
+                    let mut param = parser.parseFromStr(&value);
+                    param.paramType = ParamType::InstallBinPath;
                     param.startIndex = self.content.len();
                     self.libraryConfigs.push(param);
                 } else if self.starts_with(&v, keyword_git_debug_target_name) {

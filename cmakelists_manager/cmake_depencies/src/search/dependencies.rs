@@ -235,7 +235,7 @@ impl<'b> CDependSearcher<'b> {
                     let libpath = match &libpath.libpath {
                         Some(p) => p.to_string(),
                         None => {
-                            println!("get libpath error");
+                            // println!("get libpath error");
                             // return Err("get libpath error");
                             // "".to_string()
                             continue;
@@ -244,6 +244,46 @@ impl<'b> CDependSearcher<'b> {
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
                         name: vec![libpath],
+                        paramType: param.paramType.clone(),
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                    });
+                },
+                ParamType::InstallBinPath => {
+                    match &library.isSelf {
+                        Some(is) => {
+                            if is == is_self_false {
+                                continue;
+                            } else {
+                                // println!("########, {:?}", param.paramType);
+                            }
+                        },
+                        None => {
+                            continue;
+                        }
+                    }
+                    /*
+                    ** Get the dependent binary path
+                    */
+                    // println!("path: {}, parent: {}", path, parent);
+                    let binpath = match calc::dynlibpath::get(library, param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
+                        Some(l) => l,
+                        None => {
+                            println!("calc binpath error");
+                            return Err("calc binpath error");
+                        }
+                    };
+                    let binpath = match &binpath.binpath {
+                        Some(p) => p.to_string(),
+                        None => {
+                            // println!("get binpath error");
+                            // return Err("get binpath error");
+                            "".to_string()
+                            // continue;
+                        }
+                    };
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: vec![binpath],
                         paramType: param.paramType.clone(),
                         isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
@@ -288,7 +328,7 @@ impl<'b> CDependSearcher<'b> {
                     let include = match &libpath.include {
                         Some(p) => p,
                         None => {
-                            println!("get include error");
+                            // println!("get include error");
                             continue;
                             // return Err("get include error");
                         }

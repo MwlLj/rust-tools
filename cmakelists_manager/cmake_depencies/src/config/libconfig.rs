@@ -16,6 +16,7 @@ pub struct CPackage {
     pub release: Option<String>,
     pub rule: Option<String>,
     pub libpathRule: Option<String>,
+    pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
     pub map: Option<HashMap<String, String>>
 }
@@ -31,6 +32,7 @@ pub struct CAttributes {
     pub release: Option<String>,
     pub rule: Option<String>,
     pub libpathRule: Option<String>,
+    pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
     pub map: Option<HashMap<String, String>>
 }

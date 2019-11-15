@@ -10,8 +10,9 @@ use path_abs::PathAbs;
 use std::path::Path;
 use std::collections::HashMap;
 
-const libpath_rule_default: &str = "`var:'config'`/lib/`var:'version'`/`var:'target'`/`var:'platform'`";
-const include_rule_default: &str = "`var:'config'`/include/`var:'version'";
+const libpath_rule_default: &str = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`";
+const binpath_rule_default: &str = "`var:'config'`/`var:'version'`/bin/`var:'platform'`_`var:'target'`";
+const include_rule_default: &str = "``var:'config'`/`var:'version'`/include";
 const platform_default: &str = "";
 const target_default: &str = "";
 const enable_default: &str = "true";
@@ -29,6 +30,8 @@ const keyword_config: &str = "config";
 
 const enable_true: &str = "true";
 const enable_false: &str = "false";
+
+const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -255,6 +258,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
 #[derive(Default, Debug)]
 pub struct CResult {
     pub libpath: Option<String>,
+    pub binpath: Option<String>,
     pub include: Option<String>
 }
 
@@ -317,6 +321,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     libpath_rule_default
                 }
             };
+            let binpathRule = match &a.binpathRule {
+                Some(d) => d,
+                None => {
+                    binpath_rule_default
+                }
+            };
             let includeRule = match &a.includeRule {
                 Some(r) => r,
                 None => {
@@ -377,6 +387,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 release: None,
                 rule: None,
                 libpathRule: Some(libpathRule.to_string()),
+                binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
                 map: a.map.clone()
             }
@@ -386,6 +397,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 Some(d) => d,
                 None => {
                     libpath_rule_default
+                }
+            };
+            let binpathRule = match &libPackage.binpathRule {
+                Some(d) => d,
+                None => {
+                    binpath_rule_default
                 }
             };
             let includeRule = match &libPackage.includeRule {
@@ -448,6 +465,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 release: None,
                 rule: None,
                 libpathRule: Some(libpathRule.to_string()),
+                binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
                 map: libPackage.map.clone()
             }
@@ -483,6 +501,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     let mut libpathValue = String::new();
     // println!("attr: {:?}", &attributes);
     if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+        println!("[Error] join parse error, err: {}", err);
+        return None;
+    };
+    let mut binpathValue = String::new();
+    if let Err(err) = join(&attributes.binpathRule.unwrap(), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut binpathValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -526,10 +549,39 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     }
                 };
             } else {
-                println!("[Info] libpathEnable is false");
+                // println!("[Info] libpathEnable is false");
             }
             // if cfg!(target_os="windows") {
             // }
+        },
+        ParamType::InstallBinPath => {
+            match Path::new(&binpathValue).canonicalize() {
+                Ok(p) => {
+                    match p.to_str() {
+                        Some(s) => {
+                            if cfg!(target_os="windows"){
+                                // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                let t = s.trim_left_matches(r#"\\?\"#);
+                                let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
+                                // println!("{}, {}", &c,&t);
+                                let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
+                                r.binpath = Some(t);
+                            } else {
+                                let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().to_string();
+                                r.binpath = Some(pathconvert::abs2rel(&c, s));
+                            }
+                        },
+                        None => {
+                            // r.binpath = Some(bin_dir_default.to_string());
+                            // println!("[Error] binpath abs to_str error");
+                        }
+                    }
+                },
+                Err(err) => {
+                    // println!("[Error] binpath rule join path error, binpathValue: {}", &binpathValue);
+                    // r.binpath = Some(bin_dir_default.to_string());
+                }
+            };
         },
         ParamType::Include => {
             if includeEnableValue == enable_true {
@@ -559,7 +611,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     }
                 }
             } else {
-                println!("[Info] includeEnable is false");
+                // println!("[Info] includeEnable is false");
             }
         },
         _ => {}
