@@ -6,6 +6,7 @@ use path::walk;
 
 use std::path::Path;
 use std::fs;
+use std::collections::HashMap;
 
 const keyword_set: &str = "set";
 const keyword_git_cmakes: &str = "git_cmakes";
@@ -13,6 +14,12 @@ const keyword_git_cmakes: &str = "git_cmakes";
 enum Mode {
     Normal,
     GitCMakes
+}
+
+enum ValueMode {
+    Normal,
+    First,
+    AfterFirst(String)
 }
 
 enum WriteStatus {
@@ -24,9 +31,11 @@ enum WriteStatus {
 struct CCall {
     content: String,
     mode: Mode,
+    valueMode: ValueMode,
     writeStatus: WriteStatus,
     cmakesStartIndex: usize,
-    cmakeDir: String
+    cmakeDir: String,
+    vars: HashMap<String, Vec<String>>
 }
 
 impl ICall for CCall {
@@ -51,6 +60,25 @@ impl ICall for CCall {
                     self.popUtilEqualWord(key);
                     self.mode = Mode::GitCMakes;
                     self.writeStatus = WriteStatus::KStartStopWrite;
+                } else if k == keyword_set {
+                    match &self.valueMode {
+                        ValueMode::Normal => {
+                            self.valueMode = ValueMode::First;
+                        },
+                        ValueMode::First => {
+                            self.vars.insert(value.to_string(), Vec::new());
+                            self.valueMode = ValueMode::AfterFirst(value.to_string());
+                        },
+                        ValueMode::AfterFirst(firstKey) => {
+                            match self.vars.get_mut(firstKey.as_str()) {
+                                Some(var) => {
+                                    (*var).push(value.to_string());
+                                },
+                                None => {
+                                }
+                            }
+                        }
+                    }
                 }
             },
             Mode::GitCMakes => {
@@ -60,6 +88,7 @@ impl ICall for CCall {
                     Ok(c) => {
                         match String::from_utf8(c) {
                             Ok(s) => {
+                                // println!("{:?}", &self.vars);
                                 self.content.push_str(&s);
                                 if cfg!(target_os="windows") {
                                     self.content.push('\r');
@@ -98,6 +127,7 @@ impl ICall for CCall {
                 self.mode = Mode::Normal;
             }
         }
+        self.valueMode = ValueMode::Normal;
     }
 
     fn on_ch(&mut self, c: char) {
@@ -189,9 +219,11 @@ impl CCall {
         CCall{
             content: String::new(),
             mode: Mode::Normal,
+            valueMode: ValueMode::Normal,
             writeStatus: WriteStatus::Write,
             cmakesStartIndex: 0,
-            cmakeDir: cmakeDir
+            cmakeDir: cmakeDir,
+            vars: HashMap::new()
         }
     }
 }

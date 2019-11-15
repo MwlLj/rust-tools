@@ -1,6 +1,7 @@
 use crate::parse::{self, git_lib, joinv2::ParseMode, joinv2::ValueCode, joinv2::ValueError};
 use crate::config;
 use crate::structs;
+use crate::search;
 use git_lib::ParamType;
 use path::pathconvert;
 
@@ -584,7 +585,16 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             };
         },
         ParamType::Include => {
-            if includeEnableValue == enable_true {
+            let isSelf = match &library.isSelf {
+                Some(isSelf) => {
+                    isSelf.to_string()
+                },
+                None => {
+                    search::dependencies::is_self_false.to_string()
+                }
+            };
+            if includeEnableValue == enable_true
+            || isSelf == search::dependencies::is_self_last_true {
                 match Path::new(&includeValue).canonicalize() {
                     Ok(p) => {
                         match p.as_os_str().to_str() {

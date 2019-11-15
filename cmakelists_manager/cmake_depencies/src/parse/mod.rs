@@ -4,3 +4,4 @@ pub mod object;
 pub mod join;
 pub mod joinv2;
 pub mod rule;
+pub mod var;

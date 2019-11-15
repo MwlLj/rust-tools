@@ -19,6 +19,7 @@ const lib_config_file_suffix: &str = "library.config.toml";
 pub const is_self_defult: &str = "false";
 pub const is_self_true: &str = "true";
 pub const is_self_false: &str = "false";
+pub const is_self_last_true: &str = "last_true";
 
 #[derive(Debug, Default)]
 pub struct CResults {
@@ -171,7 +172,8 @@ impl<'b> CDependSearcher<'b> {
                         | ParamType::ReleaseTargetName => {
                             match &library.isSelf {
                                 Some(is) => {
-                                    if is == is_self_false {
+                                    if is == is_self_false
+                                    || is == is_self_last_true {
                                         continue;
                                     } else {
                                         // println!("########, {:?}", param.paramType);
@@ -208,7 +210,8 @@ impl<'b> CDependSearcher<'b> {
                         ParamType::InstallLibPath => {
                             match &library.isSelf {
                                 Some(is) => {
-                                    if is == is_self_false {
+                                    if is == is_self_false
+                                    || is == is_self_last_true {
                                         continue;
                                     } else {
                                         // println!("########, {:?}", param.paramType);
@@ -251,7 +254,8 @@ impl<'b> CDependSearcher<'b> {
                 ParamType::InstallBinPath => {
                     match &library.isSelf {
                         Some(is) => {
-                            if is == is_self_false {
+                            if is == is_self_false
+                            || is == is_self_last_true {
                                 continue;
                             } else {
                                 // println!("########, {:?}", param.paramType);
@@ -455,7 +459,18 @@ impl<'b> CDependSearcher<'b> {
                         includeEnable: includeEnable,
                         libpathEnable: libpathEnable,
                         libnameEnable: libnameEnable,
-                        isSelf: None
+                        isSelf: match &library.isSelf {
+                            Some(is) => {
+                                if is == is_self_true {
+                                    Some(is_self_last_true.to_string())
+                                } else {
+                                    None
+                                }
+                            },
+                            None => {
+                                None
+                            }
+                        }
                     }, &params, results) {
                         return Err("search error");
                     };
