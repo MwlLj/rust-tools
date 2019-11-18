@@ -23,6 +23,7 @@ const include_enable_default: &str = "true";
 const extra_type_string: &str = "string";
 const extra_type_json: &str = "json";
 
+const keyword_name: &str = "name";
 const keyword_extra: &str = "extra";
 const keyword_version: &str = "version";
 const keyword_target: &str = "target";
@@ -31,6 +32,8 @@ const keyword_config: &str = "config";
 
 const enable_true: &str = "true";
 const enable_false: &str = "false";
+
+const sub_split: &str = ",";
 
 const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
 
@@ -63,7 +66,7 @@ fn append(jsonValue: &JsonValue, result: &mut String) -> String {
     r
 }
 
-fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: &str, target: &str, map: &Option<HashMap<String, String>>, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+fn join<'a, 'b:'a>(content: &'a str, name: &str, configPath: &str, version: &str, platform: &str, target: &str, map: &Option<HashMap<String, String>>, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
     let mut flag: u8 = 0;
     let mut lastString = String::new();
     let mut lastStrings = Vec::new();
@@ -147,6 +150,17 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
                         },
                         parse::joinv2::ParseMode::Normal => {
                             result.push_str(target);
+                        },
+                        _ => {}
+                    }
+                } else if t == keyword_name {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = target.to_string();
+                            lastStrings.push(name.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(name);
                         },
                         _ => {}
                     }
@@ -260,7 +274,7 @@ fn join<'a, 'b:'a>(content: &'a str, configPath: &str, version: &str, platform: 
 pub struct CResult {
     pub libpath: Option<String>,
     pub binpath: Option<String>,
-    pub include: Option<String>
+    pub include: Option<Vec<String>>
 }
 
 pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, configPath: &str, cmakeDir: &str, version: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<CResult> {
@@ -378,10 +392,17 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     }
                 }
             };
+            let includeSubs = match &a.includeSubs {
+                Some(s) => s,
+                None => {
+                    &libPackage.name
+                }
+            };
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
                 subs: None,
+                includeSubs: Some(includeSubs.to_string()),
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
                 libnameEnable: None,
@@ -457,10 +478,17 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     }
                 }
             };
+            let includeSubs = match &libPackage.includeSubs {
+                Some(s) => s,
+                None => {
+                    &libPackage.name
+                }
+            };
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
                 subs: None,
+                includeSubs: Some(includeSubs.to_string()),
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
                 libnameEnable: None,
@@ -479,7 +507,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     ** Determine whether it is enabled
     */
     let mut enableValue = String::new();
-    if let Err(err) = join(enable, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
+    if let Err(err) = join(enable, &libPackage.name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -487,12 +515,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
         return Some(r);
     }
     let mut libpathEnableValue = String::new();
-    if let Err(err) = join(&attributes.libpathEnable.expect("libpathEnable is null"), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathEnableValue) {
+    if let Err(err) = join(&attributes.libpathEnable.expect("libpathEnable is null"), &libPackage.name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathEnableValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
     let mut includeEnableValue = String::new();
-    if let Err(err) = join(&attributes.includeEnable.expect("includeEnable is null"), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeEnableValue) {
+    if let Err(err) = join(&attributes.includeEnable.expect("includeEnable is null"), &libPackage.name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeEnableValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -503,21 +531,39 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     */
     let mut libpathValue = String::new();
     // println!("attr: {:?}", &attributes);
-    if let Err(err) = join(&attributes.libpathRule.unwrap(), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
+    if let Err(err) = join(&attributes.libpathRule.unwrap(), &libPackage.name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libpathValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
     let mut binpathValue = String::new();
-    if let Err(err) = join(&attributes.binpathRule.unwrap(), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut binpathValue) {
+    if let Err(err) = join(&attributes.binpathRule.unwrap(), &libPackage.name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut binpathValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
     // println!("###### {:?}", &libpathValue);
-    let mut includeValue = String::new();
-    if let Err(err) = join(&attributes.includeRule.unwrap(), configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
-        println!("[Error] join parse error, err: {}", err);
-        return None;
+    let includeRule = match attributes.includeRule {
+        Some(r) => r,
+        None => {
+            panic!("attribute includeRule is none");
+        }
     };
+    let includeSubs = match attributes.includeSubs {
+        Some(s) => s,
+        None => {
+            panic!("attributes include subs is none");
+        }
+    };
+    let includeSubVec = includeSubs.split(sub_split);
+    let mut includeValues = Vec::new();
+    for name in includeSubVec {
+        let mut includeValue = String::new();
+        if let Err(err) = join(&includeRule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+            println!("[Error] join parse error, err: {}", err);
+            return None;
+        };
+        includeValues.push(includeValue);
+    }
+    // println!("{:?}", &includeValues);
     // println!("###### {:?}", &includeValue);
     /*
     ** Get absolute path
@@ -597,31 +643,35 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             };
             if includeEnableValue == enable_true
             || isSelf == search::dependencies::is_self_last_true {
-                match Path::new(&includeValue).canonicalize() {
-                    Ok(p) => {
-                        match p.as_os_str().to_str() {
-                            Some(s) => {
-                                if cfg!(target_os="windows"){
-                                    // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
-                                    let t = s.trim_left_matches(r#"\\?\"#);
-                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
-                                    let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
-                                    r.include = Some(t);
-                                } else {
-                                    // r.include = Some(s.to_string());
-                                    let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().to_string();
-                                    r.include = Some(pathconvert::abs2rel(&c, s));
+                let mut includes = Vec::new();
+                for includeValue in includeValues.iter() {
+                    match Path::new(&includeValue).canonicalize() {
+                        Ok(p) => {
+                            match p.as_os_str().to_str() {
+                                Some(s) => {
+                                    if cfg!(target_os="windows"){
+                                        // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                        let t = s.trim_left_matches(r#"\\?\"#);
+                                        let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
+                                        let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
+                                        includes.push(t);
+                                    } else {
+                                        // r.include = Some(s.to_string());
+                                        let c = Path::new(cmakeDir).canonicalize().unwrap().to_str().unwrap().to_string();
+                                        includes.push(pathconvert::abs2rel(&c, s));
+                                    }
+                                },
+                                None => {
+                                    println!("[Erorr] include abs to_str error");
                                 }
-                            },
-                            None => {
-                                println!("[Erorr] include abs to_str error");
                             }
+                        },
+                        Err(err) => {
+                            println!("[Error] include rule join path error");
                         }
-                    },
-                    Err(err) => {
-                        println!("[Error] include rule join path error");
                     }
                 }
+                r.include = Some(includes);
             } else {
                 // println!("[Info] includeEnable is false");
             }

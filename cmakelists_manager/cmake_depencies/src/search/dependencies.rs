@@ -329,7 +329,7 @@ impl<'b> CDependSearcher<'b> {
                             return Err("calc include error");
                         }
                     };
-                    let include = match &libpath.include {
+                    let includes = match libpath.include {
                         Some(p) => p,
                         None => {
                             // println!("get include error");
@@ -337,9 +337,10 @@ impl<'b> CDependSearcher<'b> {
                             // return Err("get include error");
                         }
                     };
+                    // println!("{:?}", &includes);
                     rs.push(CSearchResult{
                         startIndex: param.startIndex,
-                        name: vec![include.to_string()],
+                        name: includes,
                         paramType: param.paramType.clone(),
                         isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
