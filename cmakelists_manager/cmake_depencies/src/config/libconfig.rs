@@ -9,6 +9,7 @@ pub struct CPackage {
     pub edition: Option<String>,
     pub platform: Option<String>,
     pub target: Option<String>,
+    pub subs: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
     pub libnameEnable: Option<String>,
@@ -25,6 +26,7 @@ pub struct CPackage {
 pub struct CAttributes {
     pub platform: Option<String>,
     pub target: Option<String>,
+    pub subs: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
     pub libnameEnable: Option<String>,

@@ -59,7 +59,7 @@ fn append(jsonValue: &JsonValue, result: &mut String) -> String {
     r
 }
 
-fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str, map: &Option<HashMap<String, String>>, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
+fn join<'a, 'b:'a>(content: &'a str, name: &str, version: &str, platform: &str, target: &str, map: &Option<HashMap<String, String>>, mut extraJson: &'a JsonValue, mut extraJsonClone: &'b JsonValue, result: &mut String) -> Result<(), &'a str> {
     let mut lastString = String::new();
     let mut lastStrings = Vec::new();
     let mut lastSymbol = String::new();
@@ -155,6 +155,17 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                         },
                         _ => {}
                     }
+                } else if t == keyword_name {
+                    match parseMode {
+                        parse::joinv2::ParseMode::JudgeSub => {
+                            // lastString = version.to_string();
+                            lastStrings.push(name.to_string());
+                        },
+                        parse::joinv2::ParseMode::Normal => {
+                            result.push_str(name);
+                        },
+                        _ => {}
+                    }
                 } else {
                     if let Some(m) = map {
                         match m.get(t) {
@@ -169,7 +180,7 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                                         let mut extJson = extraJson.clone();
                                         let mut extJsonClone = extJson.clone();
                                         let mut body = String::new();
-                                        if let Ok(()) = join(v, version, platform, target, map, &mut extJson, &mut extJsonClone, &mut body) {
+                                        if let Ok(()) = join(v, name, version, platform, target, map, &mut extJson, &mut extJsonClone, &mut body) {
                                             result.push_str(&body);
                                         } else {
                                             result.push_str(t);
@@ -231,7 +242,7 @@ fn join<'a, 'b:'a>(content: &'a str, version: &str, platform: &str, target: &str
                 let mut extJson = extraJson.clone();
                 let mut extJsonClone = extJson.clone();
                 let mut body = String::new();
-                if let Ok(()) = join(t, version, platform, target, map, &mut extJson, &mut extJsonClone, &mut body) {
+                if let Ok(()) = join(t, name, version, platform, target, map, &mut extJson, &mut extJsonClone, &mut body) {
                     result.push_str(&body);
                 } else {
                     result.push_str(t);
@@ -346,6 +357,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     target_default
                 }
             };
+            let subs = match &a.subs {
+                Some(s) => s,
+                None => {
+                    &libPackage.name
+                }
+            };
             let libnameEnable = match &a.libnameEnable {
                 Some(e) => {
                     match &library.libnameEnable {
@@ -389,6 +406,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
+                subs: Some(subs.to_string()),
                 includeEnable: None,
                 libpathEnable: None,
                 libnameEnable: Some(libnameEnable.to_string()),
@@ -412,6 +430,14 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 Some(t) => t,
                 None => {
                     target_default
+                }
+            };
+            let subs = match &libPackage.subs {
+                Some(s) => {
+                    s
+                },
+                None => {
+                    &libPackage.name
                 }
             };
             let libnameEnable = match &libPackage.libnameEnable {
@@ -457,6 +483,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
+                subs: Some(subs.to_string()),
                 includeEnable: None,
                 libpathEnable: None,
                 libnameEnable: Some(libnameEnable.to_string()),
@@ -474,7 +501,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     ** Determine whether it is enabled
     */
     let mut enableValue = String::new();
-    if let Err(err) = join(enable, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
+    if let Err(err) = join(enable, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut enableValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -491,7 +518,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("libnameEnable is not exist");
         }
     };
-    if let Err(err) = join(le, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libnameEnableValue) {
+    if let Err(err) = join(le, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut libnameEnableValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -510,7 +537,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("platform is not exist");
         }
     };
-    if let Err(err) = join(p, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
+    if let Err(err) = join(p, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut platformValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -521,7 +548,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("target is not exist");
         }
     };
-    if let Err(err) = join(t, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut targetValue) {
+    if let Err(err) = join(t, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut targetValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -533,7 +560,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("debug is not exist");
         }
     };
-    if let Err(err) = join(d, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
+    if let Err(err) = join(d, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut debugValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -544,12 +571,22 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("release id not exist");
         }
     };
-    if let Err(err) = join(r, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
+    if let Err(err) = join(r, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut releaseValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
+    let mut ss = libs;
+    if libs == libPackage.name {
+        ss = match &attributes.subs {
+            Some(s) => s,
+            None => {
+                panic!("attributes subs is none");
+            }
+        };
+    }
+    // println!("{:?}, {}, {:?}", ss, &libPackage.name, &attributes.subs);
     let mut subsValue = String::new();
-    if let Err(err) = join(libs, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut subsValue) {
+    if let Err(err) = join(ss, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut subsValue) {
         println!("[Error] join parse error, err: {}", err);
         return None;
     };
@@ -558,7 +595,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
         Some(m) => {
             for (k, v) in m {
                 let mut value = String::new();
-                if let Err(err) = join(v, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut value) {
+                if let Err(err) = join(v, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut value) {
                     println!("[Error] join parse error, err: {}", err);
                     continue;
                 };

@@ -381,6 +381,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
+                subs: None,
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
                 libnameEnable: None,
@@ -459,6 +460,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             config::libconfig::CAttributes{
                 platform: None,
                 target: None,
+                subs: None,
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
                 libnameEnable: None,
