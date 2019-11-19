@@ -471,7 +471,8 @@ impl<'b> CDependSearcher<'b> {
                             None => {
                                 None
                             }
-                        }
+                        },
+                        config: None
                     }, &params, results) {
                         return Err("search error");
                     };
@@ -704,7 +705,8 @@ mod test {
             includeEnable: None,
             libpathEnable: None,
             libnameEnable: None,
-            isSelf: None
+            isSelf: None,
+            config: None
         };
         let searcher = CDependSearcher::new(&cratestructs::param::CSearchFilter::default());
         /*

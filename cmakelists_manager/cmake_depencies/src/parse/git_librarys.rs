@@ -12,6 +12,7 @@ const keyword_include_enable: &str = "include_enable";
 const keyword_libpath_enable: &str = "libpath_enable";
 const keyword_libname_enable: &str = "libname_enable";
 const keyword_self: &str = "self";
+const keyword_config: &str = "config";
 pub const subs_sp: &str = ",";
 pub const subs_null: &str = "_";
 
@@ -24,7 +25,8 @@ pub struct CGitLibrarys {
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
     pub libnameEnable: Option<String>,
-    pub isSelf: Option<String>
+    pub isSelf: Option<String>,
+    pub config: Option<String>
 }
 
 impl object::IObject for CGitLibrarys {
@@ -60,6 +62,8 @@ impl object::IObject for CGitLibrarys {
             self.libnameEnable = Some(value.to_string());
         } else if key == keyword_self {
             self.isSelf = Some(value.to_string());
+        } else if key == keyword_config {
+            self.config = Some(value.to_string());
         }
     }
 }

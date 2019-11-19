@@ -12,14 +12,23 @@ impl<'a> var::IVar for CVar<'a> {
     fn on_var(&mut self, var: &str) {
         match self.vars.get(var) {
             Some(values) => {
+                if values.len() == 1 {
+                    self.content.push_str(&values[0]);
+                    return;
+                }
                 for value in values.iter() {
                     self.content.push_str(value);
+                    if cfg!(target_os="windows") {
+                        self.content.push_str("\r");
+                    }
+                    self.content.push_str("\n");
                 }
             },
             None => {
-                self.content.push_str("${");
-                self.content.push_str(var);
-                self.content.push('}');
+                // self.content.push_str("${");
+                // self.content.push_str(var);
+                // self.content.push('}');
+                self.content.push(' ');
             }
         }
     }

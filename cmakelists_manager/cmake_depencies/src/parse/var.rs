@@ -20,7 +20,7 @@ impl CVarParse {
         for c in chars {
             match mode {
                 Mode::Normal => {
-                    if c == '$' {
+                    if c == '@' {
                         mode = Mode::Dollar;
                     } else {
                         f.on_ch(c);
@@ -72,7 +72,7 @@ mod test {
     #[ignore]
     fn varParseTest() {
         let parser = CVarParse::new();
-        parser.parse(r#"hello${name}good morning${age}"#, &mut CVar{});
+        parser.parse(r#"hello@{name}good morning@{age}"#, &mut CVar{});
     }
 }
 

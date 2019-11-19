@@ -16,9 +16,10 @@ use calc::dynlibname;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const cmakelist_name: &str = "CMakeLists.txt";
+pub const keyword_cmake_file: &str = "CMakeLists.config";
 
 const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
 
@@ -28,6 +29,20 @@ pub struct CReplace {
 
 impl CReplace {
     pub fn replace(&self, cmakePath: &str, root: &str, cbbStoreRoot: &str, searchFilter: &structs::param::CSearchFilter) -> Result<(), &str> {
+        let p = Path::new(cmakePath);
+        let parent = match p.parent() {
+            Some(p) => p,
+            None => {
+                println!("get cmakePath parent path error");
+                return Err("get cmakePath parent path error");
+            }
+        };
+        let cmakeDir = match parent.to_str() {
+            Some(dir) => dir,
+            None => {
+                panic!("cmake dir not exist, should not error");
+            }
+        };
         // self.search(root, content, librarys, params)
         let merge = CMerge::new();
         let c = match merge.merge(cmakePath) {
@@ -36,14 +51,15 @@ impl CReplace {
                 return Err("cmake merge error");
             }
         };
-        let (librarys, params, replaces, mut content) = match self.environmenter.parse(&c.as_bytes().to_vec(), cbbStoreRoot) {
+        let (mut librarys, params, replaces, mut content) = match self.environmenter.parse(&c.as_bytes().to_vec(), cbbStoreRoot) {
             Ok(r) => r,
             Err(err) => {
                 return Err("cmake parse error");
             }
         };
-        // println!("{:?}", params);
-        self.search(cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces, searchFilter);
+        self.findDepends(cmakeDir, &mut librarys, cbbStoreRoot);
+        // println!("{:?}", &librarys);
+        self.search(parent, cmakeDir, cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces, searchFilter);
         Ok(())
     }
 }
@@ -73,23 +89,9 @@ impl<'a> std::cmp::Ord for CContent<'a> {
 }
 
 impl CReplace {
-    fn search(&self, path: &str, root: &str, cbbStoreRoot: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>, replaces: &Vec<CRepalce>, searchFilter: &structs::param::CSearchFilter) {
+    fn search(&self, cmakeParent: &Path, cmakeDir: &str, path: &str, root: &str, cbbStoreRoot: &str, content: &mut String, librarys: &Vec<git_librarys::CGitLibrarys>, params: &Vec<git_lib::CParam>, replaces: &Vec<CRepalce>, searchFilter: &structs::param::CSearchFilter) {
         let mut contents: HashMap<usize, String> = HashMap::new();
         let mut libs: HashSet<String> = HashSet::new();
-        let p = Path::new(path);
-        let parent = match p.parent() {
-            Some(p) => p,
-            None => {
-                println!("get path parent path error");
-                return;
-            }
-        };
-        let cmakeDir = match parent.to_str() {
-            Some(dir) => dir,
-            None => {
-                panic!("cmake dir not exist, should not error");
-            }
-        };
         for replace in replaces.iter() {
             let s = self.pathReplace(&replace.value, cbbStoreRoot, cmakeDir);
             match contents.get_mut(&replace.startIndex) {
@@ -270,7 +272,7 @@ impl CReplace {
             indexStep += item.content.len();
         }
         // println!("{:?}", &content);
-        let p = parent.join(cmakelist_name);
+        let p = cmakeParent.join(cmakelist_name);
         /*
         ** Write file
         */
@@ -361,6 +363,55 @@ impl CReplace {
                 } else {
                 }
             }
+        }
+    }
+
+    fn findDepends(&self, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
+        let mut removeNames = Vec::new();
+        let mut newLibsVec = Vec::new();
+        for lib in libs.iter() {
+            match &lib.config {
+                Some(config) => {
+                    let mut cpath = Path::new(cmakeDir);
+                    let cpath = cpath.join(config).join(keyword_cmake_file);
+                    let pathName = match cpath.to_str() {
+                        Some(p) => p.to_string(),
+                        None => {
+                            println!("config path, not found {}", keyword_cmake_file);
+                            continue;
+                        }
+                    };
+                    let c = match fs::read(cpath) {
+                        Ok(c) => c,
+                        Err(err) => {
+                            println!("[Error] {:?} is not exists", &pathName);
+                            continue;
+                        }
+                    };
+                    let (newLibs, _, _, _) = match self.environmenter.parse(&c, cbbStoreRoot) {
+                        Ok(r) => r,
+                        Err(err) => {
+                            println!("cmake parse error");
+                            continue;
+                        }
+                    };
+                    newLibsVec.push(newLibs);
+                    removeNames.push(lib.name.as_ref().expect("name is none").to_string());
+                },
+                None => {
+                }
+            }
+        }
+        for item in removeNames.iter() {
+            for (index, lib) in libs.iter().enumerate() {
+                if lib.name.as_ref().expect("name is none") == item {
+                    libs.remove(index);
+                    break;
+                }
+            }
+        }
+        for items in newLibsVec.iter_mut() {
+            libs.append(items);
         }
     }
 }
