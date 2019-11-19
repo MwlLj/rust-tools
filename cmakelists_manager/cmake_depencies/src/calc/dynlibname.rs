@@ -527,6 +527,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     if libnameEnableValue == enable_false {
         return Some(Vec::new());
     }
+    // println!("{:?}, {:?}", &libnameEnableValue, &libPackage.name);
     /*
     ** Parse each field in the attributes,
     ** and splice according to the parameters provided by the application,
@@ -587,6 +588,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
         };
     }
     // println!("{:?}, {}, {:?}", ss, &libPackage.name, &attributes.subs);
+    // println!("{:?}, {:?}", ss, libs);
     let mut subsValue = String::new();
     if let Err(err) = join(ss, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut subsValue) {
         println!("[Error] join parse error, err: {}", err);
