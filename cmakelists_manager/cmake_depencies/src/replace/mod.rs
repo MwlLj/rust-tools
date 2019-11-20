@@ -381,21 +381,22 @@ impl CReplace {
                             continue;
                         }
                     };
-                    let c = match fs::read(cpath) {
+                    let c = match fs::read(cpath.clone()) {
                         Ok(c) => c,
                         Err(err) => {
                             println!("[Error] {:?} is not exists", &pathName);
                             continue;
                         }
                     };
-                    let (newLibs, _, _, _) = match self.environmenter.parse(&c, cbbStoreRoot) {
+                    let (mut newLibs, _, _, _) = match self.environmenter.parse(&c, cbbStoreRoot) {
                         Ok(r) => r,
                         Err(err) => {
                             println!("cmake parse error");
                             continue;
                         }
                     };
-                    newLibsVec.push(newLibs);
+                    self.findDepends(cpath.parent().as_ref().expect("cmake parent is none").to_str().as_ref().expect("cmake config to_str error"), &mut newLibs, cbbStoreRoot);
+                    newLibsVec.push(newLibs.clone());
                     removeNames.push(lib.name.as_ref().expect("name is none").to_string());
                 },
                 None => {
