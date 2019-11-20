@@ -2,6 +2,7 @@ use crate::parse;
 use crate::search;
 use crate::structs;
 use crate::calc;
+use crate::config;
 use parse::git_librarys;
 use parse::git_lib;
 use search::dependencies::CDependSearcher;
@@ -106,10 +107,20 @@ impl CReplace {
         for library in librarys.iter() {
             let mut results: Vec<Vec<CSearchResult>> = Vec::new();
             let searcher = CDependSearcher::new(searchFilter);
-            if let Err(err) = searcher.search(&root, cmakeDir, library, params, &mut results) {
-                println!("[Error] search error, err: {}", err);
-                return;
-            };
+            match &library.config {
+                Some(config) => {
+                    if let Err(err) = searcher.searchByObject(&root, path, &config::exe_fixed_config::default(library.name.as_ref().expect("name is not exist")), cmakeDir, library, params, &mut results) {
+                        println!("[Error] search error, err: {}", err);
+                        return;
+                    };
+                },
+                None => {
+                    if let Err(err) = searcher.search(&root, cmakeDir, library, params, &mut results) {
+                        println!("[Error] search error, err: {}", err);
+                        return;
+                    };
+                }
+            }
             // println!("{:?}", &results);
             for result in results.iter() {
                 for item in result.iter() {
@@ -367,7 +378,7 @@ impl CReplace {
     }
 
     fn findDepends(&self, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
-        let mut removeNames = Vec::new();
+        // let mut removeNames = Vec::new();
         let mut newLibsVec = Vec::new();
         for lib in libs.iter() {
             match &lib.config {
@@ -397,12 +408,13 @@ impl CReplace {
                     };
                     self.findDepends(cpath.parent().as_ref().expect("cmake parent is none").to_str().as_ref().expect("cmake config to_str error"), &mut newLibs, cbbStoreRoot);
                     newLibsVec.push(newLibs.clone());
-                    removeNames.push(lib.name.as_ref().expect("name is none").to_string());
+                    // removeNames.push(lib.name.as_ref().expect("name is none").to_string());
                 },
                 None => {
                 }
             }
         }
+        /*
         for item in removeNames.iter() {
             for (index, lib) in libs.iter().enumerate() {
                 if lib.name.as_ref().expect("name is none") == item {
@@ -411,6 +423,7 @@ impl CReplace {
                 }
             }
         }
+        */
         for items in newLibsVec.iter_mut() {
             libs.append(items);
         }
