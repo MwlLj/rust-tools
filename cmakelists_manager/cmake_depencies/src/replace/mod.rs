@@ -13,6 +13,7 @@ use environments::CEnvironments;
 use environments::CRepalce;
 use path::pathconvert;
 use calc::dynlibname;
+use path::walk;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -377,6 +378,104 @@ impl CReplace {
         }
     }
 
+    fn searchCmakes(&self, root: &str, searchName: &str) -> Result<String, &str> {
+        let mut pathName = String::new();
+        match walk::scan::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::scan::Type| -> bool {
+            match t {
+                walk::scan::Type::Dir => {
+                    // println!("{:?}", path);
+                    // dir
+                    if name != searchName {
+                        return true;
+                    }
+                    // find lib-name/LibraryConfig.toml
+                    let fp = Path::new(path).join(keyword_cmake_file);
+                    if !fp.exists() {
+                        return true
+                    }
+                    pathName = match fp.to_str() {
+                        Some(p) => p.to_string(),
+                        None => {
+                            println!("config path, not found {}", keyword_cmake_file);
+                            return false;
+                        }
+                    };
+                    false
+                },
+                walk::scan::Type::File => {
+                    if name != keyword_cmake_file {
+                        return true;
+                    }
+                    let parent = Path::new(path).parent();
+                    match parent {
+                        Some(par) => {
+                            match par.canonicalize() {
+                                Ok(p) => {
+                                    match p.file_name() {
+                                        Some(name) => {
+                                            match name.to_str() {
+                                                Some(n) => {
+                                                    if n == searchName {
+                                                        let ppath = match p.to_str() {
+                                                            Some(s) => {
+                                                                if cfg!(target_os="windows"){
+                                                                    // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                                                    s.trim_left_matches(r#"\\?\"#).to_string()
+                                                                } else {
+                                                                    s.to_string()
+                                                                }
+                                                            },
+                                                            None => {
+                                                                return true;
+                                                            }
+                                                        };
+                                                        let fp = Path::new(&ppath).join(keyword_cmake_file);
+                                                        if !fp.exists() {
+                                                            return true
+                                                        }
+                                                        pathName = match fp.to_str() {
+                                                            Some(p) => p.to_string(),
+                                                            None => {
+                                                                println!("config path, not found {}", keyword_cmake_file);
+                                                                return false;
+                                                            }
+                                                        };
+                                                    }
+                                                },
+                                                None => {
+                                                    return true;
+                                                }
+                                            }
+                                        },
+                                        None => {
+                                            return true;
+                                        }
+                                    }
+                                },
+                                Err(err) => {
+                                    return true;
+                                }
+                            }
+                        },
+                        None => {
+                            return true;
+                        }
+                    }
+                    false
+                },
+                _ => {
+                    false
+                }
+            }
+        }) {
+            Ok(()) => {},
+            Err(err) => {
+                return Err("searchCmakes error");
+            }
+        }
+        Ok(pathName)
+    }
+
     fn findDepends(&self, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
         // let mut removeNames = Vec::new();
         let mut newLibsVec = Vec::new();
@@ -384,14 +483,23 @@ impl CReplace {
             match &lib.config {
                 Some(config) => {
                     let mut cpath = Path::new(cmakeDir);
-                    let cpath = cpath.join(config).join(keyword_cmake_file);
-                    let pathName = match cpath.to_str() {
-                        Some(p) => p.to_string(),
+                    let configDir = match cpath.join(config).to_str() {
+                        Some(s) => s.to_string(),
                         None => {
                             println!("config path, not found {}", keyword_cmake_file);
                             continue;
                         }
                     };
+                    let pathName = match self.searchCmakes(&configDir, lib.name.as_ref().expect("name is none")) {
+                        Ok(p) => {
+                            p
+                        },
+                        Err(err) => {
+                            println!("config path, not found {}, err: {}", keyword_cmake_file, err);
+                            continue;
+                        }
+                    };
+                    let cpath = Path::new(&pathName);
                     let c = match fs::read(cpath.clone()) {
                         Ok(c) => c,
                         Err(err) => {
