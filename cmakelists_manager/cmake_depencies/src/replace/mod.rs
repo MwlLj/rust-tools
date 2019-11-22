@@ -26,6 +26,7 @@ pub const keyword_cmake_file: &str = "CMakeLists.config";
 const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
 
 const config_path_split: &str = ";";
+const config_path_suffix_split: &str = ":";
 
 pub struct CReplace {
     environmenter: CEnvironments
@@ -61,7 +62,7 @@ impl CReplace {
                 return Err("cmake parse error");
             }
         };
-        self.findDepends(cmakeDir, &mut librarys, cbbStoreRoot);
+        self.findDepends(cmakeDir, cmakeDir, &mut librarys, cbbStoreRoot);
         // println!("{:?}", &librarys);
         self.search(parent, cmakeDir, cmakePath, root, cbbStoreRoot, &mut content, &librarys, &params, &replaces, searchFilter);
         Ok(())
@@ -466,7 +467,7 @@ impl CReplace {
                     false
                 },
                 _ => {
-                    false
+                    true
                 }
             }
         }) {
@@ -526,17 +527,18 @@ impl CReplace {
         Ok(include)
     }
 
-    fn findDepends(&self, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
+    fn findDepends(&self, srcCmakeDir: &str, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
         // let mut removeNames = Vec::new();
         let mut newLibsVec = Vec::new();
         for lib in libs.iter_mut() {
             match lib.config.as_mut() {
                 Some(config) => {
-                    let paths: Vec<&str> = config.split(config_path_split).collect();
+                    let configCopy = config.to_string();
+                    let paths: Vec<&str> = configCopy.split(config_path_split).collect();
                     if paths.len() == 0 {
                         continue;
                     }
-                    let cmakeListsConfigPath = paths[0];
+                    let cmakeListsConfigPath = paths[0].trim();
                     let mut cpath = Path::new(cmakeDir);
                     let configDir = match cpath.join(cmakeListsConfigPath).to_str() {
                         Some(s) => s.to_string(),
@@ -559,15 +561,19 @@ impl CReplace {
                         /*
                         * search include
                         */
-                        let includePath = paths[1];
-                        let includeDir = match cpath.join(includePath).to_str() {
+                        let includePath = paths[1].trim();
+                        let names: Vec<&str> = includePath.split(config_path_suffix_split).collect();
+                        if names.len() == 0 {
+                            continue;
+                        }
+                        let includeDir = match Path::new(cmakeDir).join(names[0].trim()).to_str() {
                             Some(s) => s.to_string(),
                             None => {
                                 println!("[Error] include path root, not found");
                                 continue;
                             }
                         };
-                        let includeValue = match self.searchInclude(&includeDir, libName, cmakeDir) {
+                        let includeValue = match self.searchInclude(&includeDir, libName, srcCmakeDir) {
                             Ok(p) => p,
                             Err(err) => {
                                 println!("include path, not found, err: {}", err);
@@ -578,6 +584,9 @@ impl CReplace {
                         // config.push('"');
                         // config.push_str("${CMAKE_CURRENT_SOURCE_DIR}/");
                         config.push_str(&includeValue);
+                        if names.len() >= 2 {
+                            config.push_str(names[1].trim());
+                        }
                         // config.push('"');
                     }
                     let cpath = Path::new(&pathName);
@@ -595,7 +604,7 @@ impl CReplace {
                             continue;
                         }
                     };
-                    self.findDepends(cpath.parent().as_ref().expect("cmake parent is none").to_str().as_ref().expect("cmake config to_str error"), &mut newLibs, cbbStoreRoot);
+                    self.findDepends(srcCmakeDir, cpath.parent().as_ref().expect("cmake parent is none").to_str().as_ref().expect("cmake config to_str error"), &mut newLibs, cbbStoreRoot);
                     newLibsVec.push(newLibs.clone());
                     // removeNames.push(lib.name.as_ref().expect("name is none").to_string());
                 },
