@@ -667,7 +667,8 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                             }
                         },
                         Err(err) => {
-                            println!("[Error] include rule join path error");
+                            // println!("[Error] include rule join path error");
+                            includes.push(includeValue.to_string());
                         }
                     }
                 }

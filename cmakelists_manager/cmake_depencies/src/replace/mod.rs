@@ -25,6 +25,8 @@ pub const keyword_cmake_file: &str = "CMakeLists.config";
 
 const bin_dir_default: &str = "${CMAKE_CURRENT_BINARY_DIR}";
 
+const config_path_split: &str = ";";
+
 pub struct CReplace {
     environmenter: CEnvironments
 }
@@ -110,7 +112,7 @@ impl CReplace {
             let searcher = CDependSearcher::new(searchFilter);
             match &library.config {
                 Some(config) => {
-                    if let Err(err) = searcher.searchByObject(&root, path, &config::exe_fixed_config::default(library.name.as_ref().expect("name is not exist")), cmakeDir, library, params, &mut results) {
+                    if let Err(err) = searcher.searchByObject(&root, path, &config::exe_fixed_config::default(library.name.as_ref().expect("name is not exist"), config), cmakeDir, library, params, &mut results) {
                         println!("[Error] search error, err: {}", err);
                         return;
                     };
@@ -476,21 +478,75 @@ impl CReplace {
         Ok(pathName)
     }
 
+    fn searchInclude(&self, root: &str, searchName: &str, currentDir: &str) -> Result<String, &str> {
+        let mut include = String::new();
+        match walk::scan::walk_one_fn(root, &mut |path: &str, name: &str, t: walk::scan::Type| -> bool {
+            match t {
+                walk::scan::Type::Dir => {
+                    // println!("{:?}", path);
+                    // dir
+                    if name != searchName {
+                        return true;
+                    }
+                    match Path::new(path).canonicalize() {
+                        Ok(p) => {
+                            match p.to_str() {
+                                Some(s) => {
+                                    if cfg!(target_os="windows"){
+                                        // let t = s.trim_left_matches(r#"\\?\"#).replace(r#"\"#, r#"\\"#);
+                                        let t = s.trim_left_matches(r#"\\?\"#);
+                                        let c = Path::new(currentDir).canonicalize().unwrap().to_str().unwrap().trim_left_matches(r#"\\?\"#).to_string();
+                                        // println!("{}, {}", &c,&t);
+                                        let t = pathconvert::abs2rel(&c, &t).replace("\\", r#"/"#);
+                                        include = t;
+                                    } else {
+                                        let c = Path::new(currentDir).canonicalize().unwrap().to_str().unwrap().to_string();
+                                        include = pathconvert::abs2rel(&c, s);
+                                    }
+                                },
+                                None => {
+                                }
+                            }
+                        },
+                        Err(err) => {
+                        }
+                    }
+                    false
+                },
+                _ => {
+                    true
+                }
+            }
+        }) {
+            Ok(()) => {},
+            Err(err) => {
+                return Err("searchCmakes error");
+            }
+        }
+        Ok(include)
+    }
+
     fn findDepends(&self, cmakeDir: &str, libs: &mut Vec<git_librarys::CGitLibrarys>, cbbStoreRoot: &str) {
         // let mut removeNames = Vec::new();
         let mut newLibsVec = Vec::new();
-        for lib in libs.iter() {
-            match &lib.config {
+        for lib in libs.iter_mut() {
+            match lib.config.as_mut() {
                 Some(config) => {
+                    let paths: Vec<&str> = config.split(config_path_split).collect();
+                    if paths.len() == 0 {
+                        continue;
+                    }
+                    let cmakeListsConfigPath = paths[0];
                     let mut cpath = Path::new(cmakeDir);
-                    let configDir = match cpath.join(config).to_str() {
+                    let configDir = match cpath.join(cmakeListsConfigPath).to_str() {
                         Some(s) => s.to_string(),
                         None => {
                             println!("config path, not found {}", keyword_cmake_file);
                             continue;
                         }
                     };
-                    let pathName = match self.searchCmakes(&configDir, lib.name.as_ref().expect("name is none")) {
+                    let libName = lib.name.as_ref().expect("name is none");
+                    let pathName = match self.searchCmakes(&configDir, libName) {
                         Ok(p) => {
                             p
                         },
@@ -499,6 +555,31 @@ impl CReplace {
                             continue;
                         }
                     };
+                    if paths.len() >= 2 {
+                        /*
+                        * search include
+                        */
+                        let includePath = paths[1];
+                        let includeDir = match cpath.join(includePath).to_str() {
+                            Some(s) => s.to_string(),
+                            None => {
+                                println!("[Error] include path root, not found");
+                                continue;
+                            }
+                        };
+                        let includeValue = match self.searchInclude(&includeDir, libName, cmakeDir) {
+                            Ok(p) => p,
+                            Err(err) => {
+                                println!("include path, not found, err: {}", err);
+                                continue;
+                            }
+                        };
+                        config.clear();
+                        // config.push('"');
+                        // config.push_str("${CMAKE_CURRENT_SOURCE_DIR}/");
+                        config.push_str(&includeValue);
+                        // config.push('"');
+                    }
                     let cpath = Path::new(&pathName);
                     let c = match fs::read(cpath.clone()) {
                         Ok(c) => c,

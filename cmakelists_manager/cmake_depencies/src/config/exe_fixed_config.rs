@@ -2,10 +2,11 @@ use super::libconfig;
 
 use std::collections::HashMap;
 
-pub fn default(name: &str) -> libconfig::CLibConfig {
+pub fn default(name: &str, config: &str) -> libconfig::CLibConfig {
     let mut package = libconfig::CPackage::default();
     package.name = name.to_string();
-    package.includeEnable = Some(String::from("false"));
+    // package.includeEnable = Some(String::from("false"));
+    package.includeRule = Some(String::from(config));
     package.libpathEnable = Some(String::from("false"));
     package.rule = Some(String::from(r#"$name$name_platform$d_r"#));
     let mut map = HashMap::new();

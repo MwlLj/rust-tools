@@ -12,7 +12,7 @@ version = "0.1.7"
 
 [dependencies.path]
 git = "https://github.com/MwlLj/rust-libs"
-version = "0.1.8"
+version = "0.1.10"
 
 [dependencies.serde]
 version = "1.0"
