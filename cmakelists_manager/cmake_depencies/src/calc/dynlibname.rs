@@ -12,6 +12,7 @@ const libname_enable_default: &str = "true";
 const debug_default: &str = "_d";
 const release_default: &str = "";
 const rule_default: &str = "$name.$version.$platform$d_r";
+const dll_rule_default: &str = "$name.$version.$platform$d_r";
 const target_default: &str = "";
 
 const extra_type_string: &str = "string";
@@ -29,6 +30,10 @@ const cmake_keyword_release: &str = "optimized";
 
 const enable_true: &str = "true";
 const enable_false: &str = "false";
+
+const bin_copy_mode_none: &str = "none";
+const bin_copy_mode_dir: &str = "dir";
+const bin_copy_mode_files: &str = "files";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -292,7 +297,20 @@ pub struct CNameResult {
     pub releaseName: String
 }
 
-pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
+enum Mode {
+    Lib,
+    Dll
+}
+
+pub fn getLib(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
+    get_inner(library, exeParam, version, libs, libPackage, libVesion, Mode::Lib)
+}
+
+pub fn getDll(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion) -> Option<Vec<String>> {
+    get_inner(library, exeParam, version, libs, libPackage, libVesion, Mode::Dll)
+}
+
+fn get_inner(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_lib::CParam, version: &str, libs: &str, libPackage: &config::libconfig::CPackage, libVesion: &config::libconfig::CVersion, mode: Mode) -> Option<Vec<String>> {
     /*
     ** Determine the type of the extension field,
     ** if it is a json type, it will be parsed
@@ -363,6 +381,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     &libPackage.name
                 }
             };
+            let dllSubs = match &a.dllSubs {
+                Some(s) => s,
+                None => {
+                    &libPackage.name
+                }
+            };
             let libnameEnable = match &a.libnameEnable {
                 Some(e) => {
                     match &library.libnameEnable {
@@ -403,10 +427,23 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     rule_default
                 }
             };
+            let dllRule = match &a.dllRule {
+                Some(r) => r,
+                None => {
+                    dll_rule_default
+                }
+            };
+            let binCopyMode = match &a.binCopyMode {
+                Some(m) => m,
+                None => {
+                    bin_copy_mode_none
+                }
+            };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
                 subs: Some(subs.to_string()),
+                dllSubs: Some(dllSubs.to_string()),
                 includeSubs: None,
                 includeEnable: None,
                 libpathEnable: None,
@@ -414,9 +451,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
+                dllRule: Some(dllRule.to_string()),
                 libpathRule: None,
                 binpathRule: None,
                 includeRule: None,
+                binCopyMode: Some(binCopyMode.to_string()),
                 map: a.map.clone()
             }
         },
@@ -434,6 +473,14 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 }
             };
             let subs = match &libPackage.subs {
+                Some(s) => {
+                    s
+                },
+                None => {
+                    &libPackage.name
+                }
+            };
+            let dllSubs = match &libPackage.dllSubs {
                 Some(s) => {
                     s
                 },
@@ -481,10 +528,23 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     rule_default
                 }
             };
+            let dllRule = match &libPackage.dllRule {
+                Some(r) => r,
+                None => {
+                    dll_rule_default
+                }
+            };
+            let binCopyMode = match &libPackage.binCopyMode {
+                Some(m) => m,
+                None => {
+                    bin_copy_mode_none
+                }
+            };
             config::libconfig::CAttributes{
                 platform: Some(platform.to_string()),
                 target: Some(target.to_string()),
                 subs: Some(subs.to_string()),
+                dllSubs: Some(dllSubs.to_string()),
                 includeSubs: None,
                 includeEnable: None,
                 libpathEnable: None,
@@ -492,13 +552,24 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 debug: Some(debug.to_string()),
                 release: Some(release.to_string()),
                 rule: Some(rule.to_string()),
+                dllRule: Some(dllRule.to_string()),
                 libpathRule: None,
                 binpathRule: None,
                 includeRule: None,
+                binCopyMode: Some(binCopyMode.to_string()),
                 map: libPackage.map.clone()
             }
         }
     };
+    match mode {
+        Mode::Lib => {
+        },
+        Mode::Dll => {
+            /*
+            ** Determine if bin is enabled
+            */
+        }
+    }
     /*
     ** Determine whether it is enabled
     */
@@ -580,12 +651,24 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     };
     let mut ss = libs;
     if libs == libPackage.name {
-        ss = match &attributes.subs {
-            Some(s) => s,
-            None => {
-                panic!("attributes subs is none");
+        match mode {
+            Mode::Lib => {
+                ss = match &attributes.subs {
+                    Some(s) => s,
+                    None => {
+                        panic!("attributes subs is none");
+                    }
+                };
+            },
+            Mode::Dll => {
+                ss = match &attributes.dllRule {
+                    Some(s) => s,
+                    None => {
+                        panic!("attributes dllRule is none");
+                    }
+                };
             }
-        };
+        }
     }
     // println!("{:?}, {}, {:?}", ss, &libPackage.name, &attributes.subs);
     // println!("{:?}, {:?}", ss, libs);
@@ -612,12 +695,25 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     /*
     ** Parse the rules and then combine the rules
     */
-    let ru = match &attributes.rule {
-        Some(ru) => ru,
-        None => {
-            panic!("rule is not exist");
+    let mut ru: &str = "";
+    match mode {
+        Mode::Lib => {
+            ru = match &attributes.rule {
+                Some(ru) => ru,
+                None => {
+                    panic!("rule is not exist");
+                }
+            };
+        },
+        Mode::Dll => {
+            ru = match &attributes.dllRule {
+                Some(ru) => ru,
+                None => {
+                    panic!("dllRule is not exist");
+                }
+            };
         }
-    };
+    }
     let mut results = Vec::new();
     let mut ls = Vec::new();
     let vs: Vec<&str> = subsValue.split(git_librarys::subs_sp).collect();

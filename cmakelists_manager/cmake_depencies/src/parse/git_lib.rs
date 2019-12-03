@@ -11,6 +11,7 @@ const keyword_name: &str = "name";
 const keyword_version: &str = "version";
 const keyword_platform: &str = "platform";
 const keyword_target: &str = "target";
+const keyword_template: &str = "template";
 const keyword_extra: &str = "extra";
 const keyword_extra_type: &str = "extra_type";
 
@@ -32,7 +33,9 @@ pub enum ParamType {
     InstallLibPath,
     InstallBinPath,
     DebugTargetName,
-    ReleaseTargetName
+    ReleaseTargetName,
+    BinDirInstall,
+    BinFilesInstall
 }
 
 impl Default for ParamType {
@@ -48,6 +51,7 @@ pub struct CParam {
     pub startIndex: usize,
     pub platform: Option<String>,
     pub target: Option<String>,
+    pub template: Option<String>,
     // pub enable: Option<String>,
     // pub includeEnable: Option<String>,
     // pub libpathEnable: Option<String>,
@@ -63,6 +67,8 @@ impl object::IObject for CParam {
             self.platform = Some(value.to_string());
         } else if key == keyword_target {
             self.target = Some(value.to_string());
+        } else if key == keyword_template {
+            self.template = Some(value.to_string());
         } else if key == keyword_extra {
             self.extra = Some(value.to_string());
         } else if key == keyword_extra_type {

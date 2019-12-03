@@ -17,6 +17,8 @@ const keyword_git_install_libpath: &str = "git_install_libpath";
 const keyword_git_install_binpath: &str = "git_install_binpath";
 const keyword_git_debug_target_name: &str = "git_debug_target_name";
 const keyword_git_release_target_name: &str = "git_release_target_name";
+const keyword_git_bin_dir_install: &str = "git_bin_dir_install";
+const keyword_git_bin_files_install: &str = "git_bin_files_install";
 const keyword_git_librarys: &str = "git_librarys";
 const keyword_set: &str = "set";
 
@@ -132,6 +134,20 @@ impl ICall for CCall {
                     let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
                     let mut param = parser.parseFromStr(&value);
                     param.paramType = ParamType::ReleaseTargetName;
+                    param.startIndex = self.content.len();
+                    self.libraryConfigs.push(param);
+                } else if self.starts_with(&v, keyword_git_bin_dir_install) {
+                    self.removeContentRightLen(value.len() + 1);
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
+                    let mut param = parser.parseFromStr(&value);
+                    param.paramType = ParamType::BinDirInstall;
+                    param.startIndex = self.content.len();
+                    self.libraryConfigs.push(param);
+                } else if self.starts_with(&v, keyword_git_bin_files_install) {
+                    self.removeContentRightLen(value.len() + 1);
+                    let parser = git_lib::CGitLibParser::new(&self.cbbStoreRoot);
+                    let mut param = parser.parseFromStr(&value);
+                    param.paramType = ParamType::BinFilesInstall;
                     param.startIndex = self.content.len();
                     self.libraryConfigs.push(param);
                 } else if (key.to_ascii_lowercase() == keyword_include_directories.to_ascii_lowercase())

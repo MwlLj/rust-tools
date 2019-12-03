@@ -8,6 +8,7 @@ use super::var_replace::CVarReplace;
 use std::path::Path;
 use std::fs;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 const keyword_set: &str = "set";
 const keyword_git_cmakes: &str = "git_cmakes";
@@ -29,6 +30,12 @@ enum WriteStatus {
     KEndStopWrite
 }
 
+#[derive(Debug, Clone)]
+struct VarPos {
+    start: usize,
+    end: usize
+}
+
 struct CCall {
     content: String,
     mode: Mode,
@@ -36,7 +43,8 @@ struct CCall {
     writeStatus: WriteStatus,
     cmakesStartIndex: usize,
     cmakeDir: String,
-    vars: HashMap<String, Vec<String>>
+    vars: HashMap<String, Vec<String>>,
+    varPos: HashMap<String, VarPos>
 }
 
 impl ICall for CCall {
@@ -69,6 +77,11 @@ impl ICall for CCall {
                         ValueMode::First => {
                             self.vars.insert(value.to_string(), Vec::new());
                             self.valueMode = ValueMode::AfterFirst(value.to_string());
+                            // println!("insert start {}, pos: {}", value, self.content.len());
+                            self.varPos.insert(value.to_string(), VarPos{
+                                start: self.content.len(),
+                                end: 0
+                            });
                         },
                         ValueMode::AfterFirst(firstKey) => {
                             match self.vars.get_mut(firstKey.as_str()) {
@@ -90,7 +103,23 @@ impl ICall for CCall {
                         match String::from_utf8(c) {
                             Ok(s) => {
                                 // println!("{:?}", &self.vars);
-                                self.content.push_str(&self.varReplace(&s));
+                                let (c, existVars) = self.varReplace(&s);
+                                /*
+                                ** Delete string in set
+                                */
+                                for v in existVars.iter() {
+                                    match self.varPos.get(v) {
+                                        Some(pos) => {
+                                            // println!("{:?}", pos.end - pos.start);
+                                            // println!("path: {:?}, end: {}, start: {}, str: {}", self.cmakeDir.as_str(), pos.end, pos.start, &self.content[pos.start..pos.end]);
+                                            self.removeVarSetContent(v, &pos.clone());
+                                            // self.removeContentRightLen(pos.end - pos.start);
+                                        },
+                                        None => {
+                                        }
+                                    }
+                                }
+                                self.content.push_str(&c);
                                 if cfg!(target_os="windows") {
                                     self.content.push('\r');
                                 }
@@ -119,7 +148,7 @@ impl ICall for CCall {
     }
 
     fn on_k_end(&mut self, key: &str) {
-        // println!("{:?}", self.content.len());
+        // println!("{:?}", &self.content);
         match self.mode {
             Mode::GitCMakes => {
                 self.writeStatus = WriteStatus::KEndStopWrite;
@@ -127,6 +156,20 @@ impl ICall for CCall {
             _ => {
                 self.mode = Mode::Normal;
             }
+        }
+        match &self.valueMode {
+            ValueMode::AfterFirst(firstKey) => {
+                match self.varPos.get_mut(firstKey.as_str()) {
+                    Some(pos) => {
+                        pos.end = self.content.len();
+                        // println!("{:?}", &self.content[self.content.len()-5..]);
+                        // println!("insert end {}, pos: {}", &firstKey, self.content.len());
+                    },
+                    None => {
+                    }
+                }
+            },
+            _ => {}
         }
         self.valueMode = ValueMode::Normal;
     }
@@ -184,7 +227,7 @@ impl ICall for CCall {
 }
 
 impl CCall {
-    fn varReplace(&self, content: &str) -> String {
+    fn varReplace(&self, content: &str) -> (String, HashSet<String>) {
         let replacer = CVarReplace::new();
         replacer.replace(content, &self.vars)
     }
@@ -218,6 +261,22 @@ impl CCall {
             self.content.pop();
         }
     }
+
+    fn removeVarSetContent(&mut self, var: &str, varPos: &VarPos) {
+        let length = varPos.end - varPos.start;
+        for i in 0..length {
+            self.content.remove(varPos.start);
+        }
+        for (key, pos) in self.varPos.iter_mut() {
+            if key == var {
+            } else {
+                if pos.start > varPos.end {
+                    pos.start -= length;
+                    pos.end -= length;
+                }
+            }
+        }
+    }
 }
 
 impl CCall {
@@ -229,7 +288,8 @@ impl CCall {
             writeStatus: WriteStatus::Write,
             cmakesStartIndex: 0,
             cmakeDir: cmakeDir,
-            vars: HashMap::new()
+            vars: HashMap::new(),
+            varPos: HashMap::new()
         }
     }
 }

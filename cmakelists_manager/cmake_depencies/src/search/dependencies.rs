@@ -274,7 +274,7 @@ impl<'b> CDependSearcher<'b> {
                         _ => {}
                     }
                     // dynamic calc this version lib - full name
-                    let names = match calc::dynlibname::get(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
+                    let names = match calc::dynlibname::getLib(library, param, searchVersion, &library.libs, &libConfig.package, dependVersion) {
                         Some(n) => n,
                         None => {
                             println!("calc full name error");

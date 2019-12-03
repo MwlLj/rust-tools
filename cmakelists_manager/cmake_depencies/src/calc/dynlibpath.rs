@@ -402,6 +402,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 platform: None,
                 target: None,
                 subs: None,
+                dllSubs: None,
                 includeSubs: Some(includeSubs.to_string()),
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
@@ -409,9 +410,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 debug: None,
                 release: None,
                 rule: None,
+                dllRule: None,
                 libpathRule: Some(libpathRule.to_string()),
                 binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
+                binCopyMode: None,
                 map: a.map.clone()
             }
         },
@@ -488,6 +491,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 platform: None,
                 target: None,
                 subs: None,
+                dllSubs: None,
                 includeSubs: Some(includeSubs.to_string()),
                 includeEnable: Some(includeEnable.to_string()),
                 libpathEnable: Some(libpathEnable.to_string()),
@@ -495,9 +499,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 debug: None,
                 release: None,
                 rule: None,
+                dllRule: None,
                 libpathRule: Some(libpathRule.to_string()),
                 binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
+                binCopyMode: None,
                 map: libPackage.map.clone()
             }
         }

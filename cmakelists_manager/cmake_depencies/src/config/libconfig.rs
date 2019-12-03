@@ -10,6 +10,7 @@ pub struct CPackage {
     pub platform: Option<String>,
     pub target: Option<String>,
     pub subs: Option<String>,
+    pub dllSubs: Option<String>,
     pub includeSubs: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
@@ -17,9 +18,11 @@ pub struct CPackage {
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
+    pub dllRule: Option<String>,
     pub libpathRule: Option<String>,
     pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
+    pub binCopyMode: Option<String>,
     pub map: Option<HashMap<String, String>>
 }
 
@@ -28,6 +31,7 @@ pub struct CAttributes {
     pub platform: Option<String>,
     pub target: Option<String>,
     pub subs: Option<String>,
+    pub dllSubs: Option<String>,
     pub includeSubs: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,
@@ -35,9 +39,11 @@ pub struct CAttributes {
     pub debug: Option<String>,
     pub release: Option<String>,
     pub rule: Option<String>,
+    pub dllRule: Option<String>,
     pub libpathRule: Option<String>,
     pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
+    pub binCopyMode: Option<String>,
     pub map: Option<HashMap<String, String>>
 }
 
@@ -63,7 +69,9 @@ pub struct CLib {
     pub libpathEnable: Option<String>,
     pub libnameEnable: Option<String>,
     pub subs: Option<String>,
-    pub root: Option<String>
+    pub dllSubs: Option<String>,
+    pub root: Option<String>,
+    pub binCopyMode: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
