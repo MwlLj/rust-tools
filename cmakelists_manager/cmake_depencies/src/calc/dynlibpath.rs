@@ -609,7 +609,9 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             // if cfg!(target_os="windows") {
             // }
         },
-        ParamType::InstallBinPath => {
+        ParamType::InstallBinPath
+        | ParamType::BinDirInstall
+        | ParamType::BinFilesInstall => {
             match Path::new(&binpathValue).canonicalize() {
                 Ok(p) => {
                     match p.to_str() {

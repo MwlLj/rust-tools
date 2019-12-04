@@ -12,7 +12,7 @@ const libname_enable_default: &str = "true";
 const debug_default: &str = "_d";
 const release_default: &str = "";
 const rule_default: &str = "$name.$version.$platform$d_r";
-const dll_rule_default: &str = "$name.$version.$platform$d_r";
+const dll_rule_default: &str = "$name";
 const target_default: &str = "";
 
 const extra_type_string: &str = "string";
@@ -31,9 +31,9 @@ const cmake_keyword_release: &str = "optimized";
 const enable_true: &str = "true";
 const enable_false: &str = "false";
 
-const bin_copy_mode_none: &str = "none";
-const bin_copy_mode_dir: &str = "dir";
-const bin_copy_mode_files: &str = "files";
+pub const bin_copy_mode_none: &str = "none";
+pub const bin_copy_mode_dir: &str = "dir";
+pub const bin_copy_mode_files: &str = "files";
 
 fn jsonToString(jsonValue: &JsonValue) -> String {
     let mut r = String::new();
@@ -568,6 +568,30 @@ fn get_inner(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_
             /*
             ** Determine if bin is enabled
             */
+            let mut binCopyModeValue = String::new();
+            let binCopyMode = match &attributes.binCopyMode {
+                Some(e) => e,
+                None => {
+                    panic!("binCopyMode is not exist");
+                }
+            };
+            if let Err(err) = join(binCopyMode, &libPackage.name, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut binCopyModeValue) {
+                println!("[Error] join parse error, err: {}", err);
+                return None;
+            }
+            if binCopyModeValue == bin_copy_mode_none {
+                return Some(Vec::new());
+            } else if binCopyModeValue == bin_copy_mode_dir {
+                if let parse::git_lib::ParamType::BinDirInstall = exeParam.paramType {
+                } else {
+                    return Some(Vec::new());
+                }
+            } else if binCopyModeValue == bin_copy_mode_files {
+                if let parse::git_lib::ParamType::BinFilesInstall = exeParam.paramType {
+                } else {
+                    return Some(Vec::new());
+                }
+            }
         }
     }
     /*
@@ -661,7 +685,7 @@ fn get_inner(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_
                 };
             },
             Mode::Dll => {
-                ss = match &attributes.dllRule {
+                ss = match &attributes.dllSubs {
                     Some(s) => s,
                     None => {
                         panic!("attributes dllRule is none");

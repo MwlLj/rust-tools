@@ -21,6 +21,7 @@ pub struct CGitLibrarys {
     pub name: Option<String>,
     pub version: Option<String>,
     pub libs: String,
+    pub dlls: String,
     pub enable: Option<String>,
     pub includeEnable: Option<String>,
     pub libpathEnable: Option<String>,

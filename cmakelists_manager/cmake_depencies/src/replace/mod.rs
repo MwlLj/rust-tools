@@ -202,6 +202,30 @@ impl CReplace {
                                 s.push_str(&na);
                             }
                         },
+                        git_lib::ParamType::BinDirInstall => {
+                            for n in item.name.iter() {
+                                if n.len() == 0 {
+                                    continue;
+                                }
+                                s.push_str(n);
+                                if cfg!(target_os="windows") {
+                                    s.push_str("\r");
+                                }
+                                s.push_str("\n");
+                            }
+                        },
+                        git_lib::ParamType::BinFilesInstall => {
+                            for n in item.name.iter() {
+                                if n.len() == 0 {
+                                    continue;
+                                }
+                                s.push_str(n);
+                                if cfg!(target_os="windows") {
+                                    s.push_str("\r");
+                                }
+                                s.push_str("\n");
+                            }
+                        },
                         git_lib::ParamType::Include => {
                             for n in &item.name {
                                 if n.len() == 0 {

@@ -5,6 +5,7 @@ use super::structs;
 use crate::structs as cratestructs;
 use parse::git_lib;
 use parse::git_librarys;
+use parse::replace;
 use git_lib::ParamType;
 
 use path::walk;
@@ -158,6 +159,15 @@ impl<'b> CDependSearcher<'b> {
                                 libs = value.name.to_string();
                             }
                         }
+                        let mut dlls = String::new();
+                        match &value.dllSubs {
+                            Some(subs) => {
+                                dlls = subs.to_string();
+                            },
+                            None => {
+                                dlls = value.name.to_string();
+                            }
+                        }
                         let mut enable = None;
                         let mut includeEnable = None;
                         let mut libpathEnable = None;
@@ -178,6 +188,7 @@ impl<'b> CDependSearcher<'b> {
                             name: Some(value.name.to_string()),
                             version: Some(value.version.to_string()),
                             libs: libs,
+                            dlls: dlls,
                             enable: enable,
                             includeEnable: includeEnable,
                             libpathEnable: libpathEnable,
@@ -401,6 +412,102 @@ impl<'b> CDependSearcher<'b> {
                         isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
                     });
                 },
+                ParamType::BinDirInstall => {
+                    // dynamic calc this version lib - full name
+                    let names = match calc::dynlibname::getDll(library, param, searchVersion, &library.dlls, &libConfig.package, dependVersion) {
+                        Some(n) => n,
+                        None => {
+                            println!("calc full name error");
+                            return Err("calc full name error");
+                        }
+                    };
+                    if names.len() == 0 {
+                        continue;
+                    }
+                    let template = match &param.template {
+                        Some(t) => t,
+                        None => {
+                            continue;
+                        }
+                    };
+                    /*
+                    ** Get bin directory
+                    */
+                    let binpath = match calc::dynlibpath::get(library, param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
+                        Some(l) => l,
+                        None => {
+                            println!("calc binpath error");
+                            return Err("calc binpath error");
+                        }
+                    };
+                    let binpath = match &binpath.binpath {
+                        Some(p) => p.to_string(),
+                        None => {
+                            continue;
+                        }
+                    };
+                    let c = replace::parse(&template, &vec![&binpath]);
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: vec![c],
+                        paramType: param.paramType.clone(),
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                    });
+                },
+                ParamType::BinFilesInstall => {
+                    // dynamic calc this version lib - full name
+                    let names = match calc::dynlibname::getDll(library, param, searchVersion, &library.dlls, &libConfig.package, dependVersion) {
+                        Some(n) => n,
+                        None => {
+                            println!("calc full name error");
+                            return Err("calc full name error");
+                        }
+                    };
+                    if names.len() == 0 {
+                        continue;
+                    }
+                    let template = match &param.template {
+                        Some(t) => t,
+                        None => {
+                            continue;
+                        }
+                    };
+                    /*
+                    ** First: Get bin directory
+                    ** Second: Get dll name collection
+                    */
+                    let binpath = match calc::dynlibpath::get(library, param, parent, cmakeDir, searchVersion, &libConfig.package, dependVersion) {
+                        Some(l) => l,
+                        None => {
+                            println!("calc binpath error");
+                            return Err("calc binpath error");
+                        }
+                    };
+                    let binpath = match &binpath.binpath {
+                        Some(p) => p.to_string(),
+                        None => {
+                            continue;
+                        }
+                    };
+                    let mut ns = Vec::new();
+                    for item in names.iter() {
+                        let nameResult: calc::dynlibname::CNameResult = serde_json::from_str(item).expect("CNameResult from_str error => replace/mode.rs");
+                        match Path::new(&binpath).join(&nameResult.fullName).to_str() {
+                            Some(s) => {
+                                let c = replace::parse(&template, &vec![s]);
+                                ns.push(c);
+                            },
+                            None => {
+                            }
+                        }
+                    }
+                    rs.push(CSearchResult{
+                        startIndex: param.startIndex,
+                        name: ns,
+                        paramType: param.paramType.clone(),
+                        isSelf: library.isSelf.clone().unwrap_or(is_self_defult.to_string())
+                    });
+                },
                 _ => {
                 }
             }
@@ -431,6 +538,7 @@ mod test {
             name: Some("test".to_string()),
             version: Some("0.1.10".to_string()),
             libs: String::new(),
+            dlls: String::new(),
             enable: None,
             includeEnable: None,
             libpathEnable: None,

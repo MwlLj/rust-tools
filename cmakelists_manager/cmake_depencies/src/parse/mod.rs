@@ -5,3 +5,4 @@ pub mod join;
 pub mod joinv2;
 pub mod rule;
 pub mod var;
+pub mod replace;
