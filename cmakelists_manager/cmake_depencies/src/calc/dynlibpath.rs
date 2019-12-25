@@ -10,6 +10,7 @@ use path_abs::PathAbs;
 
 use std::path::Path;
 use std::collections::HashMap;
+use std::fs;
 
 const libpath_rule_default: &str = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`";
 const binpath_rule_default: &str = "`var:'config'`/`var:'version'`/bin/`var:'platform'`_`var:'target'`";
@@ -601,6 +602,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     },
                     Err(err) => {
                         println!("[Error] libpath rule join path error, libpathValue: {}", &libpathValue);
+                        fs::create_dir_all(&libpathValue);
                     }
                 };
             } else {
@@ -637,6 +639,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 Err(err) => {
                     // println!("[Error] binpath rule join path error, binpathValue: {}", &binpathValue);
                     // r.binpath = Some(bin_dir_default.to_string());
+                    fs::create_dir_all(&binpathValue);
                 }
             };
         },
