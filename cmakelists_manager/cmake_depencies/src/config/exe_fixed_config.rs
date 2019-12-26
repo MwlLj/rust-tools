@@ -17,6 +17,8 @@ pub fn default(name: &str, config: &str) -> libconfig::CLibConfig {
         } elseif var:'target' == str:'win32' {
         } elseif var:'target' == str:'centos64' {
             64
+        } elseif var:'target' == str:'ubuntu64' {
+            64
         } else {
         }
         "`
