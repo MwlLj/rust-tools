@@ -1,0 +1,15 @@
+[package]
+name = "searcher"
+version = "0.1.0"
+authors = ["MwlLj <731025894@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.path]
+git = "https://github.com/MwlLj/rust-libs"
+version = "0.1.10"
+
+[dependencies.rust_parse]
+git = "https://github.com/MwlLj/rust_parse"
+version =  "0.1.13"
