@@ -109,11 +109,13 @@ impl CJoinParser {
         let mut innerWordPhotograph = innerWord.clone();
         let mut innerLastModePhotograph = innerLastMode.clone();
         let mut innerModePhotograph = innerMode.clone();
+        let mut end = '`';
         for c in chars {
             match mode {
                 Mode::Normal => {
-                    if c == '`' {
+                    if c == '`' || c == '~' {
                         mode = Mode::Block;
+                        end = c;
                     } else {
                         if !c.is_ascii_whitespace() {
                             f.on_ch(c, parseMode);
@@ -123,9 +125,9 @@ impl CJoinParser {
                 Mode::Block => {
                     match blockMode {
                         BlockMode::Normal => {
-                            if c == '`' {
+                            if c == end {
                                 mode = Mode::Normal;
-                            } else if c == '"' || c == '\'' {
+                            } else if c == '"' || c == '\'' || c == '^' {
                                 blockChar = c;
                                 if word.len() > 0 {
                                     let w = word.trim();

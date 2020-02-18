@@ -32,6 +32,7 @@ impl CObjectParser {
         let mut key = String::new();
         let mut value = String::new();
         let mut bigBracketsCount = 0;
+        let mut end: char = '\'';
         for c in chars {
             match symbolMode {
                 SymbolMode::Normal => {
@@ -42,8 +43,9 @@ impl CObjectParser {
                     }
                 },
                 SymbolMode::BigBrackets => {
-                    if c == '\'' {
+                    if c == '\'' || c == '^' {
                         symbolMode = SymbolMode::SingleQuote;
+                        end = c;
                     } else if c == '=' {
                         wordMode = WordMode::Value;
                     } else if c == '}' && bigBracketsCount == 1 {
@@ -88,7 +90,7 @@ impl CObjectParser {
                 SymbolMode::Comma => {
                 },
                 SymbolMode::SingleQuote => {
-                    if c == '\'' {
+                    if c == end {
                         symbolMode = SymbolMode::BigBrackets;
                     } else {
                         match wordMode {
@@ -156,7 +158,18 @@ mod test {
             xxx = '{
                 "name": "jake",
                 "age": 20
-            }'
+            }',
+            yyy = ^`judge:"
+                if var:'target' == str:'win64' {
+                    opencv_core2410,opencv_highgui2410,opencv_imgproc2410,opencv_imgcodecs2410
+                } elseif var:'target' == str:'win32' {
+                    opencv_core2410,opencv_highgui2410,opencv_imgproc2410,opencv_imgcodecs2410
+                } elseif var:'target' == str:'gnu64' {
+                    opencv_core,opencv_highgui,opencv_imgproc,opencv_imgcodecs
+                } else {
+                    opencv_core,opencv_highgui,opencv_imgproc,opencv_imgcodecs
+                }
+            "`^
         }"#, &mut f);
     }
 }
