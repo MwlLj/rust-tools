@@ -455,6 +455,7 @@ fn get_inner(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_
                 libpathRule: None,
                 binpathRule: None,
                 includeRule: None,
+                includeRules: None,
                 binCopyMode: Some(binCopyMode.to_string()),
                 map: a.map.clone()
             }
@@ -556,6 +557,7 @@ fn get_inner(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_
                 libpathRule: None,
                 binpathRule: None,
                 includeRule: None,
+                includeRules: None,
                 binCopyMode: Some(binCopyMode.to_string()),
                 map: libPackage.map.clone()
             }

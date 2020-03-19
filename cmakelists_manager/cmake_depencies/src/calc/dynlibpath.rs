@@ -15,7 +15,7 @@ use std::fs;
 const libpath_rule_default: &str = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`";
 const binpath_rule_default: &str = "`var:'config'`/`var:'version'`/bin/`var:'platform'`_`var:'target'`";
 const include_rule_default: &str = "`var:'config'`/`var:'version'`/include";
-const include_rules_default: Vec<String> = Vec::new();
+const include_rules_default: [&str; 0] = [];
 const platform_default: &str = "";
 const target_default: &str = "";
 const enable_default: &str = "true";
@@ -350,10 +350,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     include_rule_default
                 }
             };
+            let includeRulesTmp = Vec::new();
             let includeRules = match &a.includeRules {
                 Some(r) => r,
                 None => {
-                    include_rules_default
+                    &includeRulesTmp
                 }
             };
             let includeEnable = match &a.includeEnable {
@@ -446,10 +447,11 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     include_rule_default
                 }
             };
+            let includeRulesTmp = Vec::new();
             let includeRules = match &libPackage.includeRules {
                 Some(r) => r,
                 None => {
-                    include_rules_default
+                    &includeRulesTmp
                 }
             };
             let includeEnable = match &libPackage.includeEnable {
