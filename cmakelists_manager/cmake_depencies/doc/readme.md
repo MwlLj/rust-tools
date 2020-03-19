@@ -146,6 +146,7 @@ debug = "_d"
 release = ""
 rule = "$name$name_platform.$version$d_r"
 includeRule = "`var:'config'`/`var:'version'`/include"
+includeRules = ["`var:'config'`/`var:'version'`", "`var:'config'`/`var:'version'`/include/src", "`var:'config'`/`var:'version'`/include/src/postgres/include"]
 libpathRule = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`"
 libpathEnable = "false"
 libnameEnable = "false"
@@ -187,7 +188,7 @@ $d_r 就是 debug / release 的值 ($d_r用于占位)
 rule = "$name$name_platform.$version$d_r"
 上面的 $name_platform 就是自定义的
 
-5. include/libpath路径规则
+5.1 include/libpath路径规则
 如:
 includeRule = "`var:'config'`/`var:'version'`/include"
 libpathRule = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`"
@@ -198,6 +199,10 @@ libpathRule = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'
 ... algorithmtool/0.1.0/include
 如果CMakeLists.config给定的 platform是 vs2015, target是win64, 那么 上例中的 libpathRule 的最终结果就是:
 ... algorithmtool/0.1.0/lib/vs2015_win64
+
+5.2 配置多个包含路径
+如:
+includeRules = ["`var:'config'`/`var:'version'`", "`var:'config'`/`var:'version'`/include/src", "`var:'config'`/`var:'version'`/include/src/postgres/include"]
 
 6. 指定依赖本库的上层是否需要包含本库
 场景: 如果库只有头文件, 没有库, 就设置为 false
