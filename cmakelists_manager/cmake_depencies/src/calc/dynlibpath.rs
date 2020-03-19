@@ -571,12 +571,15 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("attribute includeRule is none");
         }
     };
-    let inclydeRules = match attributes.includeRules {
+    let mut includeRules = match attributes.includeRules {
         Some(r) => r,
         None => {
             panic!("attribute includeRules is none");
         }
     };
+    if includeRules.len() == 0 {
+        includeRules.push(includeRule);
+    }
     let includeSubs = match attributes.includeSubs {
         Some(s) => s,
         None => {
@@ -586,20 +589,14 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     let includeSubVec = includeSubs.split(sub_split);
     let mut includeValues = Vec::new();
     for name in includeSubVec {
-        let mut includeValue = String::new();
-        if let Err(err) = join(&includeRule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
-            println!("[Error] join parse error, err: {}", err);
-            return None;
-        };
-        includeValues.push(includeValue);
-    }
-    for name in inclydeRules {
-        let mut includeValue = String::new();
-        if let Err(err) = join(&includeRule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
-            println!("[Error] join parse error, err: {}", err);
-            return None;
-        };
-        includeValues.push(includeValue);
+	for rule in &includeRules {
+	    let mut includeValue = String::new();
+	    if let Err(err) = join(&rule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+		println!("[Error] join parse error, err: {}", err);
+		return None;
+	    };
+	    includeValues.push(includeValue);
+	}
     }
     // println!("{:?}", &includeValues);
     // println!("###### {:?}", &includeValue);
