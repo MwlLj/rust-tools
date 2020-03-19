@@ -20,6 +20,7 @@ pub struct CPackage {
     pub rule: Option<String>,
     pub dllRule: Option<String>,
     pub libpathRule: Option<String>,
+    pub includeRules: Option<Vec<String>>,
     pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
     pub binCopyMode: Option<String>,
@@ -43,6 +44,7 @@ pub struct CAttributes {
     pub libpathRule: Option<String>,
     pub binpathRule: Option<String>,
     pub includeRule: Option<String>,
+    pub includeRules: Option<Vec<String>>,
     pub binCopyMode: Option<String>,
     pub map: Option<HashMap<String, String>>
 }

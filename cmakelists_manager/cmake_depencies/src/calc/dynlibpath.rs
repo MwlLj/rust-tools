@@ -14,7 +14,8 @@ use std::fs;
 
 const libpath_rule_default: &str = "`var:'config'`/`var:'version'`/lib/`var:'platform'`_`var:'target'`";
 const binpath_rule_default: &str = "`var:'config'`/`var:'version'`/bin/`var:'platform'`_`var:'target'`";
-const include_rule_default: &str = "``var:'config'`/`var:'version'`/include";
+const include_rule_default: &str = "`var:'config'`/`var:'version'`/include";
+const include_rules_default: Vec<String> = Vec::new();
 const platform_default: &str = "";
 const target_default: &str = "";
 const enable_default: &str = "true";
@@ -349,6 +350,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                     include_rule_default
                 }
             };
+            let includeRules = match &a.includeRules {
+                Some(r) => r,
+                None => {
+                    include_rules_default
+                }
+            };
             let includeEnable = match &a.includeEnable {
                 Some(e) => {
                     match &library.includeEnable {
@@ -415,6 +422,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 libpathRule: Some(libpathRule.to_string()),
                 binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
+                includeRules: Some(includeRules.clone()),
                 binCopyMode: None,
                 map: a.map.clone()
             }
@@ -436,6 +444,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 Some(r) => r,
                 None => {
                     include_rule_default
+                }
+            };
+            let includeRules = match &libPackage.includeRules {
+                Some(r) => r,
+                None => {
+                    include_rules_default
                 }
             };
             let includeEnable = match &libPackage.includeEnable {
@@ -504,6 +518,7 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
                 libpathRule: Some(libpathRule.to_string()),
                 binpathRule: Some(binpathRule.to_string()),
                 includeRule: Some(includeRule.to_string()),
+                includeRules: Some(includeRules.clone()),
                 binCopyMode: None,
                 map: libPackage.map.clone()
             }
@@ -554,6 +569,12 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
             panic!("attribute includeRule is none");
         }
     };
+    let inclydeRules = match attributes.includeRules {
+        Some(r) => r,
+        None => {
+            panic!("attribute includeRules is none");
+        }
+    };
     let includeSubs = match attributes.includeSubs {
         Some(s) => s,
         None => {
@@ -563,6 +584,14 @@ pub fn get(library: &parse::git_librarys::CGitLibrarys, exeParam: &parse::git_li
     let includeSubVec = includeSubs.split(sub_split);
     let mut includeValues = Vec::new();
     for name in includeSubVec {
+        let mut includeValue = String::new();
+        if let Err(err) = join(&includeRule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
+            println!("[Error] join parse error, err: {}", err);
+            return None;
+        };
+        includeValues.push(includeValue);
+    }
+    for name in inclydeRules {
         let mut includeValue = String::new();
         if let Err(err) = join(&includeRule, &name, configPath, version, platform, target, &attributes.map, &mut extraJson, &mut extraJsonClone, &mut includeValue) {
             println!("[Error] join parse error, err: {}", err);
